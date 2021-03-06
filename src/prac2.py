@@ -1,6 +1,4 @@
-from pydantic import BaseModel, ValidationError
-from typing import List
-from src.objects import ServerObject
+from src.pyopenapi3.objects import ServerObject
 
 
 z1 = {

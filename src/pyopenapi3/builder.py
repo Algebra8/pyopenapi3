@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 import yaml
 import inspect
 from collections import OrderedDict

@@ -1,6 +1,6 @@
-from src.builder import OpenApiBuilder
-from src.typedefs import OpenApiObject
-from src.fields import (
+from src.pyopenapi3.builder import OpenApiBuilder
+from src.pyopenapi3.typedefs import OpenApiObject
+from src.pyopenapi3.fields import (
     Int64,
     String,
     Email,
