@@ -255,6 +255,30 @@ class ServerBuilder:
         return {"servers": self._builds}
 
 
+class PathBuilder:
+    """Path (aka endpoint), builder for Open API 3.0.0.
+
+    The `PathBuilder` holds an array of paths and delegates
+    the building of substructures, such as the Responses, to
+    other builders.
+    """
+
+    def __init__(self):
+        self._builds = []
+
+    def __call__(self, _cls):
+        # Get path and any formatted path params.
+        #   - Create the parameter using the schema provided.
+        # Go through each method and weed out the HTTP methods,
+        # such as `get`, `post`, etc.
+        #   - Get requestBody and Responses from return annotations
+        #   - Get query params from method params annotations
+        #   - Build the request body
+        #   - Build the responses
+        #   - Build the query params
+        ...
+
+
 class OpenApiBuilder:
     """Super builder for Open API 3.0.0 document.
 

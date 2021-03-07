@@ -4,9 +4,6 @@ from src.pyopenapi3.fields import (
     Int64,
     String,
     Email,
-    Boolean,
-    Double,
-    Array
 )
 
 
