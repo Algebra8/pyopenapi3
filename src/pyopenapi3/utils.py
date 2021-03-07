@@ -1,5 +1,6 @@
-from typing import Optional, Any, Union, Dict
+from typing import Optional, Any, Union, Dict, Type
 import inspect
+from string import Formatter
 
 from .fields import (
     Number,
@@ -10,11 +11,13 @@ from .fields import (
     Field,
     is_arb_type
 )
+import pyopenapi3.fields  # Used to get a class from a name.
 from .typedefs import (
     OpenApiSchema,
     ObjectSchema,
     PrimitiveSchema,
-    ArraySchema
+    ArraySchema,
+    OpenApiObject
 )
 from ._yaml import Ref
 
@@ -39,6 +42,31 @@ def _issubclass(c1, c2):
     if inspect.isclass(c1):
         return issubclass(c1, c2)
     return False
+
+
+def get_name_and_type(formatted_str):
+    """
+    Parse a formatted string and return the names
+    of the args and their types.
+
+    E.g. "/user/{id:int}" -> ("id", "int")
+    """
+    for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
+        try:
+            yield arg_name, _get_field_from_name(_type_name)
+        except AttributeError:
+            raise ValueError(
+                "A non-`Field` or `OpenApiObject` type was found. "
+                f"Can't use `{_type_name}` as a type in {formatted_str}."
+            ) from None
+
+
+def _get_field_from_name(name):
+    """Get the Field type from a given name.
+
+    E.g. "Int64" -> <class 'pyopenapi3.fields.Int64'>
+    """
+    return getattr(pyopenapi3.fields, name)
 
 
 # Field parsers.
@@ -68,6 +96,23 @@ def parse_numbers(n):
         return {'type': 'number', 'format': n.__name__.lower()}
     elif issubclass(n, Integer):
         return {'type': 'integer', 'format': n.__name__.lower()}
+
+
+def create_schema(
+        schema_type: Union[Type[Field], OpenApiObject],
+        # If `schema_type` is some subclass of `OpenApiObject`,
+        # then we might want to just return a reference to the
+        # object.
+        reference_only: bool = False
+) -> Any:
+    if _issubclass(schema_type, OpenApiObject):
+        if reference_only:
+            return create_reference(schema_type.__name__)
+        else:
+            return create_object(schema_type, descr=schema_type.__doc__)
+    else:
+        return convert_type_to_schema(schema_type, descr=None,
+                                      read_only=False, example=None)
 
 
 def create_object(

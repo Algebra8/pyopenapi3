@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Union, Type
 import yaml
 import inspect
 from collections import OrderedDict
@@ -11,12 +11,20 @@ from .utils import (
     create_object,
     create_reference,
     convert_type_to_schema,
-    mark_component_and_attach_schema
+    mark_component_and_attach_schema,
+    get_name_and_type,
+    create_schema
 )
 from .typedefs import (
     OpenApiObject
 )
-from .objects import InfoObject, ServerObject
+from .fields import Field
+from .objects import (
+    InfoObject,
+    ServerObject,
+    Response,
+    RequestBody
+)
 from ._yaml import make_yaml_accept_references
 
 
@@ -30,7 +38,7 @@ class ComponentBuilder:
             read_only: bool = False,
             example: Optional[Any] = None,
     ):
-        def func_wrapper(f_or_cls):
+        def wrapper(f_or_cls):
 
             if inspect.isclass(f_or_cls):
                 # Classes will get decorated **after** their methods.
@@ -79,7 +87,7 @@ class ComponentBuilder:
 
             return f_or_cls
 
-        return func_wrapper
+        return wrapper
 
     def dump(self, *a, **kw):
         return self, a, kw
@@ -255,6 +263,59 @@ class ServerBuilder:
         return {"servers": self._builds}
 
 
+class ParamBuilder:
+
+    defn = '__OPENAPIDEF__PARAM__'
+
+    def __init__(self, __in: str):
+        # What type of param is being built.
+        # Can be a path, query, header, or cookie parameter.
+        self.__in = __in
+
+    def __call__(
+            self, *, name: str,
+            schema_type: Union[Type[Field], OpenApiObject],
+            required: bool = False,
+            allow_reserved: bool = False
+    ):
+        param = self.build_param(
+            name=name, schema_type=schema_type,
+            required=required, allow_reserved=allow_reserved
+        )
+
+        def wrapper(method):
+            if not hasattr(method, self.defn):
+                setattr(method, self.defn, [param])
+            else:
+                getattr(method, self.defn).append(param)
+            return method
+
+        return wrapper
+
+    @classmethod
+    def get_params_from_method(cls, method):
+        return getattr(method, cls.defn)
+
+    def build_param(
+            self, *, name: str,
+            schema_type: Union[Type[Field], OpenApiObject],
+            required: bool = False,
+            allow_reserved: bool = False
+    ):
+        param = {
+            'in': self.__in,
+            'name': name,
+            'schema': create_schema(schema_type)
+        }
+
+        if required:
+            param['required'] = True
+        if allow_reserved:
+            param['allowReserved'] = True
+
+        return param
+
+
 class PathBuilder:
     """Path (aka endpoint), builder for Open API 3.0.0.
 
@@ -263,10 +324,30 @@ class PathBuilder:
     other builders.
     """
 
+    _methods = {
+        'get', 'post', 'put', 'patch',
+        'delete', 'head', 'options',
+        'trace'
+    }
+
+    method_defn = '__OPENAPIDEF__METHOD__'
+
     def __init__(self):
+        self.query_param = ParamBuilder('query')
+        self.header_param = ParamBuilder('header')
+        self.cookie_param = ParamBuilder('cookie')
+
+        # `paths` can be multiple paths, so they are
+        # represented as an array.
         self._builds = []
 
-    def __call__(self, _cls):
+    def __call__(
+            self, *,
+            tags: Optional[List[str]] = None,
+            summary: Optional[str] = None,
+            operation_id: Optional[str] = None,
+            external_docs: Any = None
+    ):
         # Get path and any formatted path params.
         #   - Create the parameter using the schema provided.
         # Go through each method and weed out the HTTP methods,
@@ -276,7 +357,110 @@ class PathBuilder:
         #   - Build the request body
         #   - Build the responses
         #   - Build the query params
-        ...
+
+        # iterate over methods
+        def wrapper(f_or_cls):
+            if inspect.isclass(f_or_cls):
+                _cls = f_or_cls
+
+                path_params = []
+                for path_name, schema_type in get_name_and_type(_cls.path):
+                    path_param = ParamBuilder('path').build_param(
+                        name=path_name,
+                        schema_type=schema_type,
+                        required=True
+                    )
+                    path_params.append(path_param)
+
+                schema = {}
+                for name, val in _cls.__dict__.items():
+                    if name.lower() in self._methods:
+                        method_name = name.lower()
+                        schema[method_name] = getattr(val, self.method_defn)
+                        # Here we finally append the path param.
+                        schema[method_name]['parameters'].append(path_params)
+
+                self._builds.append(schema)
+            else:
+                _f = f_or_cls
+
+                schema = {}
+                if tags is not None:
+                    schema['tags'] = tags
+                if summary is not None:
+                    schema['summary'] = summary
+                if operation_id is not None:
+                    schema['operationId'] = operation_id
+                if _f.__doc__ is not None:
+                    schema['description'] = _f.__doc__
+
+                # Get any type of param except for the path.
+                # The path param is retrieved from `path` set on the
+                # clients class, which won't be reached until we run
+                # through the class itself. Notice that there is no
+                # cls.path_param, but there are other types of params.
+                schema['parameters'] = ParamBuilder.get_params_from_method(_f)
+
+                # Parse the responses and request body from the annots
+                # and then validate them.
+                # Once they are validated they can be attached to the
+                # given method.
+                method_annots = _f.__annotations__['return']
+                request_body: Union[RequestBody, Dict[str, Any]]
+                responses: List[Union[Response, Dict[str, Any]]]
+                if hasattr(method_annots, '_name'):
+                    # typing.Tuple
+                    request_body, responses = method_annots.__args__
+                else:
+                    request_body, responses = method_annots
+
+                _validated_request_body: Dict[str, Any]
+                _validated_responses: List[Dict[str, Any]] = []
+                if not isinstance(request_body, RequestBody):
+                    # Need to validate the attrs.
+                    try:
+                        RequestBody(**request_body)
+                    except ValidationError as e:
+                        # TODO better error handling
+                        print(e.json())
+                        return
+                    else:
+                        _validated_request_body = request_body
+                else:
+                    _validated_request_body = request_body.dict()
+
+                for response in responses:
+                    if not isinstance(response, Response):
+                        try:
+                            Response(**response)
+                        except ValidationError as e:
+                            # TODO better error handling
+                            print(e.json())
+                            return
+                        else:
+                            _validated_responses.append(response)
+                    else:
+                        _validated_responses.append(response.dict())
+
+                schema['requestBody'] = _validated_request_body
+                schema['responses'] = _validated_responses
+
+                setattr(_f, self.method_defn, schema)
+
+            return f_or_cls
+
+        return wrapper
+
+    # @staticmethod
+    # def _create_param(name, _type):
+    #     schema = {
+    #         'name': None,
+    #         'in': None,
+    #         'description': None,
+    #         'required':
+    #     }
+    #
+    #     return name
 
 
 class OpenApiBuilder:

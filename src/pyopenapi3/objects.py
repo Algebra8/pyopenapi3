@@ -4,20 +4,20 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class Schema(BaseModel):
+class SchemaObject(BaseModel):
     ...
 
 
 # info
-class ContactObject(BaseModel):
+class ContactObject(SchemaObject):
     ...
 
 
-class LicenseObject(BaseModel):
+class LicenseObject(SchemaObject):
     ...
 
 
-class InfoObject(BaseModel):
+class InfoObject(SchemaObject):
     """Serialized Info Object.
     """
 
@@ -30,14 +30,14 @@ class InfoObject(BaseModel):
 
 
 # servers
-class ServerVariableObject(BaseModel):
+class ServerVariableObject(SchemaObject):
 
     enum: Optional[List[str]]
     default: str
     description: Optional[str]
 
 
-class ServerObject(BaseModel):
+class ServerObject(SchemaObject):
     """Serialized Server Object.
     """
 
@@ -61,7 +61,7 @@ class MediaType(str):
     png = "image/png"
 
 
-class Response(BaseModel):
+class Response(SchemaObject):
     """Serialized Response Object.
     """
 
@@ -70,7 +70,7 @@ class Response(BaseModel):
 
     status: int
     description: Optional[str]
-    content: Optional[List[Tuple[MediaType, Schema]]]
+    content: Optional[List[Tuple[MediaType, SchemaObject]]]
 
 
 class RequestBody(BaseModel):
@@ -81,8 +81,19 @@ class RequestBody(BaseModel):
         arbitrary_types_allowed = True
 
     description: Optional[str]
-    content: Optional[List[Tuple[MediaType, Schema]]]
+    # TODO Fix this type
+    content: Optional[Tuple[MediaType, SchemaObject]]
     required: bool = False
+
+
+class Parameter(BaseModel):
+
+    name: str
+    __in: str
+    description: Optional[str]
+    required: bool = False
+    # schema: Schema
+
 
 
 

@@ -1,22 +1,9 @@
-from enum import Enum
-from pyopenapi3.objects import ServerObject
 from typing import Tuple, NewType, List
+
+from pyopenapi3.builder import ParamBuilder
+from pyopenapi3.fields import Int64, Email
 from pydantic import BaseModel
-from string import Formatter
-
-
-z1 = {
-    'url': '/'
-}
-
-s1 = ServerObject(**z1)
-
-z2 = {
-    'url': '/',
-    'description': 'some server',
-    'variables': {'enum'}
-}
-
+from pyopenapi3.utils import get_name_and_type
 
 class Response:
 
@@ -105,7 +92,9 @@ class Users:
     # The latter can be done by demanding annotations for
     # the param. Then it can be retrieved with get.__annotations__.
     # The param would also have to be a subtype of Field.
-    def get(self, q1: int) -> (get_body, get_responses):
+    # @open_bldr.path.param()
+    # @open_bldr.path()
+    def get(self) -> (get_body, get_responses):
         """Get all users"""
 
     def post(self) -> path:
@@ -127,53 +116,20 @@ class Users:
         return d
 
 
-def f() -> (int, str):
-    ...
-
-
-def q() -> Tuple[str, int]:
-    ...
+query_param = ParamBuilder("query")
 
 
 class A:
-    ...
+
+    @query_param(name='some query', schema_type=Email)
+    @query_param(name='some query', schema_type=Int64)
+    def s(self) -> int:
+        ...
+
+z = '{a:Int64}{b:String}{c:Email}'
 
 
-z = "users/{id:A}"
+for i in get_name_and_type(z):
+    print(i)
 
 
-t = [fn for _, fn, _, _ in Formatter().parse(z) if fn is not None]
-
-
-def get_name_and_type(formatted_str):
-    return [(i, j) for _, i, j, _ in Formatter().parse(formatted_str)][0]
-
-
-print(get_name_and_type(z))
-
-
-class MediaType(str):
-
-    json = "application/json"
-    xml = "application/xml"
-    pdf = "application/pdf"
-    url_encoded = "application/x-www-form-urlencoded"
-    multipart = "multipart/form-data"
-    plain = "text/plain; charset=utf-8"
-    html = "text/html"
-    png = "image/png"
-
-
-class B(BaseModel):
-
-    media: MediaType
-
-
-e = {'media': MediaType.json}
-
-b = B(**e)
-
-import yaml
-import sys
-
-yaml.dump(b.dict(), sys.stdout, allow_unicode=True)
