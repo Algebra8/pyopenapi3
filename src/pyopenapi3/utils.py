@@ -2,22 +2,31 @@ from typing import Optional, Any, Union, Dict, Type
 import inspect
 from string import Formatter
 
-from .fields import (
+from .objects import (
     Number,
     String,
     Boolean,
     Integer,
     Array,
     Field,
-    is_arb_type
+    is_arb_type,
+    Primitive,
+    Component
 )
-import pyopenapi3.fields  # Used to get a class from a name.
+import pyopenapi3.objects  # Used to get a class from a name.
 from .typedefs import (
     OpenApiSchema,
     ObjectSchema,
-    PrimitiveSchema,
-    ArraySchema,
+    # PrimitiveSchema,
+    # ArraySchema,
     OpenApiObject
+)
+from .schemas import (
+    ArraySchema,
+    ComponentSchema,
+    ReferenceSchema,
+    PrimitiveSchema,
+    Schema
 )
 from ._yaml import Ref
 
@@ -66,7 +75,7 @@ def _get_field_from_name(name):
 
     E.g. "Int64" -> <class 'pyopenapi3.fields.Int64'>
     """
-    return getattr(pyopenapi3.fields, name)
+    return getattr(pyopenapi3.objects, name)
 
 
 # Field parsers.
@@ -235,3 +244,60 @@ def mark_component_and_attach_schema(obj, schema):
     `ObjectSchema`.
     """
     setattr(obj, OPENAPI_DEF, schema)
+
+
+def create_schema(
+        __type: Type[OpenApiObject],
+        is_reference: Optional[bool] = None,
+        description: Optional[str] = None,
+        read_only: Optional[bool] = None,
+        example: Optional[Any] = None,
+        **kwargs
+) -> Schema:
+    if issubclass(__type, Primitive):
+        return convert_primitive_to_schema(
+            __type, description=description,
+            read_only=read_only, example=example
+        )
+    if issubclass(__type, Array):
+        return convert_array_to_schema(__type)
+    if issubclass(__type, Component):
+        assert is_reference is not None
+        return convert_component_to_schema(__type, is_reference)
+
+
+def convert_component_to_schema(
+        component: Type[Component],
+        is_reference: bool
+) -> ComponentSchema:
+    assert is_reference is not None
+    if is_reference:
+        return ReferenceSchema(f"{component}")
+    else:
+        return ComponentSchema("")
+
+
+def convert_primitive_to_schema(
+        primitive: Type[Primitive], *,
+        description: Optional[str],
+        read_only: bool,
+        example: Optional[Any]
+) -> PrimitiveSchema:
+    schema = PrimitiveSchema(**parse_attr(primitive))
+    if description is not None:
+        schema.description = description
+    if read_only:
+        # This may seem redundant but we do not want to
+        # clutter the OpenAPI definition with 'readOnly = false'.
+        # So, only set `readOnly` if it is True.
+        schema.readOnly = True
+    if example is not None:
+        schema.example = example
+
+    return schema
+
+
+def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
+    """Convert a concrete array type to an ArraySchema."""
+    return ArraySchema(f'asd {array}')
+
