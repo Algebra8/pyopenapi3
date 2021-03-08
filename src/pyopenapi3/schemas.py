@@ -1,23 +1,47 @@
-from typing import Optional, Dict, List, Tuple
-from enum import Enum
+from typing import Optional, Dict, List, Tuple, Any
 
 from pydantic import BaseModel
 
 
-class SchemaObject(BaseModel):
+class Schema(BaseModel):
+
+    def dict(self, *, exclude_defaults=True, **kwargs):
+        """Make default `dict` method exclude defaults by default."""
+        return super().dict(exclude_defaults=exclude_defaults, **kwargs)
+
+
+# Field Schemas
+class PrimitiveSchema(Schema):
+
+    type: str
+    format: Optional[str]
+    description: Optional[str]
+    readOnly: Optional[bool]
+    example: Optional[Any]
+
+
+class ArraySchema(Schema):
     ...
 
 
-# info
-class ContactObject(SchemaObject):
+class ComponentSchema(Schema):
     ...
 
 
-class LicenseObject(SchemaObject):
+class ReferenceSchema(ComponentSchema):
     ...
 
 
-class InfoObject(SchemaObject):
+# Info metadata schemas.
+class ContactObject(Schema):
+    ...
+
+
+class LicenseObject(Schema):
+    ...
+
+
+class InfoObject(Schema):
     """Serialized Info Object.
     """
 
@@ -29,15 +53,15 @@ class InfoObject(SchemaObject):
     license: Optional[LicenseObject]
 
 
-# servers
-class ServerVariableObject(SchemaObject):
+# Server schemas
+class ServerVariableObject(Schema):
 
     enum: Optional[List[str]]
     default: str
     description: Optional[str]
 
 
-class ServerObject(SchemaObject):
+class ServerObject(Schema):
     """Serialized Server Object.
     """
 
@@ -47,8 +71,7 @@ class ServerObject(SchemaObject):
     variables: Optional[Dict[str, ServerVariableObject]]
 
 
-# Paths
-# Includes Response, Request Body, Media Type
+# Path schemas
 class MediaType(str):
 
     json = "application/json"
@@ -61,7 +84,7 @@ class MediaType(str):
     png = "image/png"
 
 
-class Response(SchemaObject):
+class Response(Schema):
     """Serialized Response Object.
     """
 
@@ -70,7 +93,7 @@ class Response(SchemaObject):
 
     status: int
     description: Optional[str]
-    content: Optional[List[Tuple[MediaType, SchemaObject]]]
+    content: Optional[List[Tuple[MediaType, Schema]]]
 
 
 class RequestBody(BaseModel):
@@ -82,7 +105,7 @@ class RequestBody(BaseModel):
 
     description: Optional[str]
     # TODO Fix this type
-    content: Optional[Tuple[MediaType, SchemaObject]]
+    content: Optional[Tuple[MediaType, Schema]]
     required: bool = False
 
 
