@@ -1,4 +1,5 @@
 from typing import Iterable, Any
+import functools
 
 
 class Field:
@@ -41,7 +42,8 @@ class Int64(Integer):
     ...
 
 
-_arb_type_enum = object()
+class ArbitraryArray:
+    ...
 
 
 class Array(Field, Iterable):
@@ -59,19 +61,17 @@ class Array(Field, Iterable):
     # Ideally, non of this would be necessary, but
     # until variadic generics (PEP 646) become a thing,
     # this should do.
-
-    def __init__(self, __args):
-        self._args = __args
+    tvars = None
 
     def __repr__(self):
-        return f"Array{self._args}"
+        return f"Array{self.tvars}"
 
     def __class_getitem__(cls, parameters):
         args: Any
 
         if parameters == Ellipsis:
             # Arbitrary types
-            args = (_arb_type_enum,)
+            args = (ArbitraryArray,)
         elif not isinstance(parameters, tuple):
             # Single type, e.g. [1, 2, 3] aka [int].
             # Still put in tuple for uniform interface.
@@ -82,17 +82,24 @@ class Array(Field, Iterable):
         else:
             raise ValueError("Do things right.")
 
-        return Array(args)
+        @functools.wraps(cls, updated=())
+        class ConcreteArray(Array):
+            tvars = args
+
+        q = ", ".join([_type.__name__ for _type in args])
+        ConcreteArray.__qualname__ = f"{cls.__qualname__}[{q}]"
+
+        return ConcreteArray
 
     def __iter__(self):
-        return iter(self._args)
+        return iter(self.tvars)
 
     def __len__(self):
-        return len(self._args)
+        return len(self.tvars)
 
     def __getitem__(self, idx: int):
-        return self._args[idx]
+        return self.tvars[idx]
 
 
 def is_arb_type(__type) -> bool:
-    return __type is _arb_type_enum
+    return __type is ArbitraryArray
