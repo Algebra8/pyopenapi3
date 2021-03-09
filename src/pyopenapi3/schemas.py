@@ -37,7 +37,15 @@ class ComponentSchema(Schema):
 
 
 class ReferenceSchema(ComponentSchema):
-    ...
+
+    ref: str
+
+    def dict(self, *args, **kwargs):
+        """Return $ref as key for reference."""
+        d = super().dict(*args, **kwargs)
+        d["$ref"] = d["ref"]
+        del d["ref"]
+        return d
 
 
 # Info metadata schemas.
