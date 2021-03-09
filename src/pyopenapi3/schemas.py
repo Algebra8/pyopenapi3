@@ -110,7 +110,7 @@ class MediaType(str):
     png = "image/png"
 
 
-class Response(Schema):
+class ResponseSchema(Schema):
     """Serialized Response Object.
     """
 
@@ -122,7 +122,7 @@ class Response(Schema):
     content: Optional[List[Tuple[MediaType, Schema]]]
 
 
-class RequestBody(BaseModel):
+class RequestBodySchema(Schema):
     """Serialized Request Body Object.
     """
 
@@ -135,7 +135,7 @@ class RequestBody(BaseModel):
     required: bool = False
 
 
-class ParamSchema(BaseModel):
+class ParamSchema(Schema):
 
     name: str
     __in: str
@@ -155,4 +155,41 @@ class ParamSchema(BaseModel):
         del d['_schema']
 
         return d
+
+
+class HttpMethodSchema(Schema):
+
+    tags: Optional[List[str]]
+    summary: Optional[str]
+    description: Optional[str]
+    operationId: Optional[str]
+    parameters: Optional[List[ParamSchema]]
+    # The str for `responses` are the status codes,
+    # e.g. {'200': ResponseSchema()}
+    responses: Dict[str, ResponseSchema]
+    request_body: Optional[RequestBodySchema]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'request_body' in d:
+            d['requestBody'] = d['request_body']
+            del d['request_body']
+        return d
+
+
+class HttpMethodMappingSchema(Schema):
+
+    get:        Optional[HttpMethodSchema]
+    post:       Optional[HttpMethodSchema]
+    put:        Optional[HttpMethodSchema]
+    patch:      Optional[HttpMethodSchema]
+    delete:     Optional[HttpMethodSchema]
+    head:       Optional[HttpMethodSchema]
+    options:    Optional[HttpMethodSchema]
+    trace:      Optional[HttpMethodSchema]
+
+
+class PathMappingSchema(Schema):
+
+    paths: Dict[str, HttpMethodMappingSchema]
 
