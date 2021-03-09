@@ -135,18 +135,17 @@ class RequestBody(BaseModel):
     required: bool = False
 
 
-class Parameter(BaseModel):
+class ParamSchema(BaseModel):
 
     name: str
     __in: str
     description: Optional[str]
     required: bool = False
-    # schema: Schema
+    schema: Schema
 
-
-
-
-
-
-
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        d['in'] = d['__in']  # required field
+        del d['__in']
+        return d
 
