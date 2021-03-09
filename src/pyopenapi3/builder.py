@@ -16,7 +16,7 @@ from .utils import (
 from .objects import Field, Component
 from .schemas import (
     InfoSchema,
-    ServerObject,
+    ServerSchema,
     Response,
     RequestBody,
 )
@@ -195,11 +195,11 @@ class ServerBuilder:
     value of /.
     """
 
-    # If you are wondering why we only need ServerObject attrs and
-    # not ServerVariableObject attrs, it is because the client should
-    # interface with the ServerObject.
+    # If you are wondering why we only need ServerSchema and
+    # not ServerVariableSchema, it is because the client should
+    # only interface with the ServerSchema.
     #
-    # Any ServerVariableObject will be a concrete attr attached to
+    # Any `ServerVariableSchema` will be a concrete `dict` attached to
     # the class representing the Server object:
     #
     #     class SomeServer:
@@ -207,18 +207,28 @@ class ServerBuilder:
     #         description = 'Some server'
     #         variables = [{'default': 'a'}, {'default': 'b'}]
     #
-    # So, once we pull out the `ServerObject`'s attrs, pydantic
-    # will do all the heavy lifting.
-    _object = ServerObject
-    _field_keys = ServerObject.__fields__.keys()
+    # So, once we pull out the `ServerSchema`'s attrs, pydantic
+    # should do all the heavy lifting.
+    _schema = ServerSchema
+    _field_keys = ServerSchema.__fields__.keys()
 
     def __init__(self):
-        # The servers section can contain one or more Server Objects.
-        self.builds = []
+        # The servers section can contain one or more Server objects.
+        self._builds: List[ServerSchema] = []
+
+    @property
+    def builds(self) -> List[ServerSchema]:
+        if not self._builds:
+            # servers have not been provided, a default
+            # server with a url value of '/' will be provided.
+            return [
+                self._schema(url='/', description="Default server")
+            ]
+        return self._builds
 
     def __call__(self, cls):
         try:
-            server_object = self._object(
+            server_object = self._schema(
                 **{k: v for k, v in cls.__dict__.items()
                    if k in self._field_keys}
             )
@@ -228,16 +238,10 @@ class ServerBuilder:
             print(vars(e))
             print(e.json())
         else:
-            self.builds.append(server_object.dict())
+            self._builds.append(server_object)
 
     def as_dict(self):
-        if not self.builds:
-            # servers have not been provided, a default
-            # server with a url value of / will be provided.
-            self.builds.append(
-                self._object(url='/', description="Default server.").dict()
-            )
-        return {"servers": self.builds}
+        return {"servers": [schema.dict() for schema in self.builds]}
 
 
 class ParamBuilder:
@@ -469,6 +473,6 @@ class OpenApiBuilder:
         return self.builds
 
     def as_yaml(self, filename):
-        with make_yaml_accept_references(yaml) as _yaml:
+        with make_yaml_ordered(yaml) as _yaml:
             with open(filename, 'w') as f:
                 _yaml.dump(self.as_dict(), f, allow_unicode=True)
