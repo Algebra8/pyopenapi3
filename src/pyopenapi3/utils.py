@@ -39,14 +39,6 @@ def _format_description(s: Optional[str]) -> Optional[str]:
     return " ".join(s.split())
 
 
-# Helper for issubclass so it won't break
-# every time a non-class is checked.
-def _issubclass(c1, c2):
-    if inspect.isclass(c1):
-        return issubclass(c1, c2)
-    return False
-
-
 def get_name_and_type(formatted_str):
     """
     Parse a formatted string and return the names
@@ -158,7 +150,16 @@ def _convert_component_to_schema(
     schema = ComponentSchema(description=description)
     for attr in component.__dict__.values():
         if hasattr(attr, OPENAPI_DEF):
-            schema.properties.update(getattr(attr, OPENAPI_DEF))
+            property_schema: Union[
+                PrimitiveSchema,
+                ComponentSchema,
+                ReferenceSchema,
+                ArraySchema
+            ] = getattr(attr, OPENAPI_DEF)
+            # Don't need to `.dict()` these because
+            # top-level `.dict()` called on `schema`
+            # will recursively convert them.
+            schema.properties.update(property_schema)
     return schema
 
 
@@ -188,9 +189,8 @@ def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
     # The types contained in the Array:
     # Array[int, str] -> tvars = (int, str)
     tvars: Tuple[
-        Union[
-            Type[Component],
-            Type[Field]
+        Type[
+            Union[Component, Field]
         ]
     ] = array.tvars
     if len(tvars) == 1:
@@ -228,15 +228,14 @@ def build_property_schema_from_func(
         read_only: Optional[bool],
         example: Optional[Any],
 ) -> Schema:
-    """Convert data on a custom object's method to a Field
-    or Component schema and return its Open API representation,
+    """Convert data on a custom object's method to a `Field`
+    or `Component` schema and return its Open API representation,
     i.e. {name: schema}.
     """
     if not hasattr(f, '__annotations__'):
         raise ValueError("Must include 'return' annotations.")
 
     property_type = f.__annotations__['return']
-    property_name = f.__name__
     description = f.__doc__
 
     schema = create_schema(

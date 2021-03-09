@@ -60,7 +60,7 @@ class LicenseObject(Schema):
     ...
 
 
-class InfoObject(Schema):
+class InfoSchema(Schema):
     """Serialized Info Object.
     """
 
@@ -70,6 +70,13 @@ class InfoObject(Schema):
     terms_of_service: Optional[str]
     contact: Optional[ContactObject]
     license: Optional[LicenseObject]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'terms_of_service' in d:
+            d['termsOfService'] = d['terms_of_service']
+            del d['terms_of_service']
+        return d
 
 
 # Server schemas

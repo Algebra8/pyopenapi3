@@ -3,27 +3,24 @@ import yaml
 import inspect
 from collections import OrderedDict
 
-from pydantic import ValidationError
+from pydantic import ValidationError  # type: ignore
 
 from .utils import (
-    _format_description,
     build_property_schema_from_func,
     mark_component_and_attach_schema,
     get_name_and_type,
     create_schema,
     inject_component
 )
-from .typedefs import (
-    OpenApiObject
-)
-from .objects import Field
+
+from .objects import Field, Component
 from .schemas import (
-    InfoObject,
+    InfoSchema,
     ServerObject,
     Response,
-    RequestBody
+    RequestBody,
 )
-from ._yaml import make_yaml_accept_references
+from ._yaml import make_yaml_ordered
 
 
 class ComponentBuilder:
@@ -71,7 +68,7 @@ class ComponentBuilder:
                 # schemas and build them.
                 mark_component_and_attach_schema(
                     _f,
-                    {_f.__name__: component_schema.dict()}
+                    {_f.__name__: component_schema}
                 )
 
                 f_or_cls = _f
@@ -84,7 +81,7 @@ class ComponentBuilder:
         return self, a, kw
 
     def as_yaml(self, filename):
-        with make_yaml_accept_references(yaml) as _yaml:
+        with make_yaml_ordered(yaml) as _yaml:
             with open(filename, 'w') as f:
                 _yaml.dump(self._builds, f, allow_unicode=True)
 
@@ -158,30 +155,15 @@ class InfoObjectBuilder:
     Provides metadata about the API.
     """
 
-    _object = InfoObject
-    _field_keys = InfoObject.__fields__.keys()
-
-    _attr_names = {
-        'title', 'description', 'version',
-        'terms_of_service', 'contact', 'contact',
-        'license'
-    }
+    _schema = InfoSchema
+    _field_keys = InfoSchema.__fields__.keys()
 
     def __init__(self):
-        # Assuming Python 3.6+, so dicts are ordered.
-        # We initialize the dict to preserver ordering.
-        self._builds = {
-            'title': None,
-            'description': None,
-            'termsOfService': None,
-            'contact': None,
-            'license': None,
-            'version': None
-        }
+        self._builds = None  # type: InfoSchema
 
     def __call__(self, cls):
         try:
-            info_object = self._object(
+            info_object = self._schema(
                 **{k: v for k, v in cls.__dict__.items()
                    if k in self._field_keys}
             )
@@ -189,19 +171,15 @@ class InfoObjectBuilder:
             # TODO Better error handling
             print(e.json())
         else:
-            info_dict = info_object.dict()
-            # Iterate to preserve ordering in `_builds`.
-            for k in self._attr_names:
-                # Convert from Python naming to JSON.
-                if k == 'terms_of_service':
-                    self._builds['termsOfService'] = info_dict.get(
-                        'terms_of_service'
-                    )
-                    continue
-                self._builds[k] = info_dict.get(k)
+            # Pydantic *should* maintain ordering since
+            # we made sure to use type annotations to
+            # all fields.
+            # See:
+            # https://pydantic-docs.helpmanual.io/usage/models/#required-fields
+            self._builds = info_object
 
     def as_dict(self):
-        return {'info': self._builds}
+        return {'info': self._builds.dict()}
 
 
 # TODO Nullable values should not be included with regards to pydantic objects.
@@ -273,7 +251,7 @@ class ParamBuilder:
 
     def __call__(
             self, *, name: str,
-            schema_type: Union[Type[Field], OpenApiObject],
+            schema_type: Union[Type[Field], Type[Component]],
             required: bool = False,
             allow_reserved: bool = False
     ):
@@ -297,7 +275,7 @@ class ParamBuilder:
 
     def build_param(
             self, *, name: str,
-            schema_type: Union[Type[Field], OpenApiObject],
+            schema_type: Union[Type[Field], Component],
             required: bool = False,
             allow_reserved: bool = False
     ):
