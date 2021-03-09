@@ -247,7 +247,7 @@ class ServerBuilder:
 
 class ParamBuilder:
 
-    defn = '__OPENAPIDEF__PARAM__'
+    defn = '__OPENAPIDEF_PARAM__'
     _schema = ParamSchema
 
     def __init__(self, __in: str):
@@ -324,14 +324,14 @@ class PathBuilder:
         'trace'
     }
 
-    method_defn = '__OPENAPIDEF__METHOD__'
+    method_defn = '__OPENAPIDEF_METHOD__'
 
     def __init__(self):
         self.query_param = ParamBuilder('query')
         self.header_param = ParamBuilder('header')
         self.cookie_param = ParamBuilder('cookie')
 
-        # `paths` can be multiple paths, so they are
+        # There can be multiple `paths`, so they are
         # represented as an array.
         self.builds = []
 
@@ -340,6 +340,7 @@ class PathBuilder:
             tags: Optional[List[str]] = None,
             summary: Optional[str] = None,
             operation_id: Optional[str] = None,
+            # TODO external docs
             external_docs: Any = None
     ):
         # Get path and any formatted path params.
@@ -361,7 +362,7 @@ class PathBuilder:
                 for path_name, schema_type in get_name_and_type(_cls.path):
                     path_param = ParamBuilder('path').build_param(
                         name=path_name,
-                        schema_type=schema_type,
+                        field=schema_type,
                         required=True
                     )
                     path_params.append(path_param)
