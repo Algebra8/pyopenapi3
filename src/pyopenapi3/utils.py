@@ -172,8 +172,8 @@ def create_primitive(
     return schema
 
 
-def create_reference(name, path: str = "#/components/schemas") -> Ref:
-    return Ref((path, name))
+def create_reference(name: str) -> ReferenceSchema:
+    return ReferenceSchema(ref=f"#/components/schemas/{name}")
 
 
 def create_array(arr: Array) -> ArraySchema:
@@ -272,7 +272,7 @@ def convert_component_to_schema(
 ) -> ComponentSchema:
     assert is_reference is not None
     if is_reference:
-        return ReferenceSchema(f"{component}")
+        return create_reference(component.__name__)
     else:
         return ComponentSchema("")
 
@@ -328,6 +328,9 @@ def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
             schema.items['oneOf'].append(
                 create_schema(
                     cast(Type[OpenApiObject], t),
+                    # As mentioned above, in the case that
+                    # it is a custom object, only return a
+                    # reference.
                     if_reference=True
                 )
             )
