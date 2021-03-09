@@ -18,7 +18,7 @@ def represent_ordereddict(dumper, data):
 
 
 @contextlib.contextmanager
-def make_yaml_accept_references(__yaml):
+def make_yaml_ordered(__yaml):
     __yaml.add_representer(OrderedDict, represent_ordereddict)
 
     try:
