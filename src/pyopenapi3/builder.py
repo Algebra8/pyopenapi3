@@ -19,6 +19,7 @@ from .schemas import (
     ServerSchema,
     Response,
     RequestBody,
+    ParamSchema
 )
 from ._yaml import make_yaml_ordered
 
@@ -247,6 +248,7 @@ class ServerBuilder:
 class ParamBuilder:
 
     defn = '__OPENAPIDEF__PARAM__'
+    _schema = ParamSchema
 
     def __init__(self, __in: str):
         # What type of param is being built.
@@ -255,15 +257,24 @@ class ParamBuilder:
 
     def __call__(
             self, *, name: str,
-            schema_type: Union[Type[Field], Type[Component]],
+            # `field` may seem like a misnomer since `Component`
+            # is not a type of `Field`, but lower-cased `field`
+            # should not be confused with the `Field` type.
+            field: Union[Type[Field], Type[Component]],
             required: bool = False,
-            allow_reserved: bool = False
+            allow_reserved: bool = False,
+            description: Optional[str] = None
     ):
         param = self.build_param(
-            name=name, schema_type=schema_type,
-            required=required, allow_reserved=allow_reserved
+            name=name, field=field, required=required,
+            allow_reserved=allow_reserved,
+            description=description
         )
 
+        # The params are per method. E.g. `get` can have multiple
+        # query parameters or `post` can have header parameters, etc.
+        # Therefore, params are attached as a `list` on the methods
+        # themselves.
         def wrapper(method):
             if not hasattr(method, self.defn):
                 setattr(method, self.defn, [param])
@@ -279,20 +290,22 @@ class ParamBuilder:
 
     def build_param(
             self, *, name: str,
-            schema_type: Union[Type[Field], Component],
+            field: Union[Type[Field], Component],
             required: bool = False,
-            allow_reserved: bool = False
-    ):
-        param = {
-            'in': self.__in,
-            'name': name,
-            'schema': create_schema(schema_type)
-        }
-
-        if required:
-            param['required'] = True
-        if allow_reserved:
-            param['allowReserved'] = True
+            allow_reserved: bool = False,
+            description: Optional[str] = None
+    ) -> ParamSchema:
+        try:
+            param = self._schema(
+                name=name, __in=self.__in,
+                description=description, required=required,
+                allow_reserved=allow_reserved,
+                schema=create_schema(field)
+            )
+        except ValidationError as e:
+            # TODO Error handling
+            print(e.json())
+            raise ValueError("Something didn't work.")
 
         return param
 
