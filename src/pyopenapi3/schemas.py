@@ -1,13 +1,13 @@
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Optional, Dict, List, Tuple, Any, Union
 
 from pydantic import BaseModel
 
 
 class Schema(BaseModel):
 
-    def dict(self, *, exclude_defaults=True, **kwargs):
-        """Make default `dict` method exclude defaults by default."""
-        return super().dict(exclude_defaults=exclude_defaults, **kwargs)
+    def dict(self, *, exclude_unset=True, **kwargs):
+        """Make default `dict` method exclude unsets by default."""
+        return super().dict(exclude_unset=exclude_unset, **kwargs)
 
 
 # Field Schemas
@@ -21,7 +21,15 @@ class PrimitiveSchema(Schema):
 
 
 class ArraySchema(Schema):
-    ...
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    type: str
+    items: Dict[
+        str,
+        Union[str, Dict[str, Schema], List[Schema]]
+    ]
 
 
 class ComponentSchema(Schema):
