@@ -268,13 +268,26 @@ def create_schema(
 
 def convert_component_to_schema(
         component: Type[Component],
+        description: Optional[str],
         is_reference: bool
-) -> ComponentSchema:
+) -> Union[ComponentSchema, ReferenceSchema]:
     assert is_reference is not None
     if is_reference:
         return create_reference(component.__name__)
     else:
-        return ComponentSchema("")
+        return _convert_component_to_schema(component, description=description)
+
+
+def _convert_component_to_schema(
+        component: Type[Component],
+        description: Optional[str]
+) -> ComponentSchema:
+    """Only converts non-reference Component objects."""
+    schema = ComponentSchema(description=description)
+    for attr in component.__dict__.values():
+        if hasattr(attr, OPENAPI_DEF):
+            schema.properties.update(getattr(attr, OPENAPI_DEF))
+    return schema
 
 
 def convert_primitive_to_schema(

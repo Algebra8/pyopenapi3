@@ -5,9 +5,9 @@ from pydantic import BaseModel
 
 class Schema(BaseModel):
 
-    def dict(self, *, exclude_unset=True, **kwargs):
-        """Make default `dict` method exclude unsets by default."""
-        return super().dict(exclude_unset=exclude_unset, **kwargs)
+    def dict(self, *, exclude_none=True, **kwargs):
+        """Make default `dict` method excludes `None`s by default."""
+        return super().dict(exclude_none=exclude_none, **kwargs)
 
 
 # Field Schemas
@@ -33,10 +33,13 @@ class ArraySchema(Schema):
 
 
 class ComponentSchema(Schema):
-    ...
+
+    type: str = 'object'
+    description: Optional[str]
+    properties: Dict[str, Any] = {}
 
 
-class ReferenceSchema(ComponentSchema):
+class ReferenceSchema(Schema):
 
     ref: str
 
