@@ -141,11 +141,18 @@ class ParamSchema(BaseModel):
     __in: str
     description: Optional[str]
     required: bool = False
-    schema: Schema
+    _schema: Schema
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
-        d['in'] = d['__in']  # required field
+
+        # __in -> in
+        d['in'] = d['__in']
         del d['__in']
+
+        # _schema -> schema
+        d['schema'] = d['_schema']
+        del d['_schema']
+
         return d
 
