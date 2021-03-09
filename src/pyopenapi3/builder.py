@@ -195,11 +195,11 @@ class ServerBuilder:
     value of /.
     """
 
-    # If you are wondering why we only need ServerObject attrs and
-    # not ServerVariableObject attrs, it is because the client should
-    # interface with the ServerObject.
+    # If you are wondering why we only need ServerSchema and
+    # not ServerVariableSchema, it is because the client should
+    # only interface with the ServerSchema.
     #
-    # Any ServerVariableObject will be a concrete attr attached to
+    # Any `ServerVariableSchema` will be a concrete `dict` attached to
     # the class representing the Server object:
     #
     #     class SomeServer:
@@ -207,23 +207,23 @@ class ServerBuilder:
     #         description = 'Some server'
     #         variables = [{'default': 'a'}, {'default': 'b'}]
     #
-    # So, once we pull out the `ServerObject`'s attrs, pydantic
-    # will do all the heavy lifting.
+    # So, once we pull out the `ServerSchema`'s attrs, pydantic
+    # should do all the heavy lifting.
     _schema = ServerSchema
     _field_keys = ServerSchema.__fields__.keys()
 
     def __init__(self):
-        # The servers section can contain one or more Server Objects.
+        # The servers section can contain one or more Server objects.
         self._builds: List[ServerSchema] = []
 
     @property
-    def builds(self):
+    def builds(self) -> List[ServerSchema]:
         if not self._builds:
             # servers have not been provided, a default
             # server with a url value of '/' will be provided.
-            return self._schema(
-                url='/', description="Default server"
-            )
+            return [
+                self._schema(url='/', description="Default server")
+            ]
         return self._builds
 
     def __call__(self, cls):
@@ -241,7 +241,7 @@ class ServerBuilder:
             self._builds.append(server_object)
 
     def as_dict(self):
-        return {"servers": self.builds.dict()}
+        return {"servers": [schema.dict() for schema in self.builds]}
 
 
 class ParamBuilder:
