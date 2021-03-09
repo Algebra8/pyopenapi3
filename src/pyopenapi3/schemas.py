@@ -51,6 +51,14 @@ class ReferenceSchema(Schema):
         return d
 
 
+FieldSchema = Union[
+    PrimitiveSchema,
+    ArraySchema,
+    ComponentSchema,
+    ReferenceSchema
+]
+
+
 # Info metadata schemas.
 class ContactObject(Schema):
     ...
@@ -122,6 +130,11 @@ class ResponseSchema(Schema):
     content: Optional[List[Tuple[MediaType, Schema]]]
 
 
+class MediaToFieldMappingSchema(Schema):
+
+    schema: FieldSchema
+
+
 class RequestBodySchema(Schema):
     """Serialized Request Body Object.
     """
@@ -131,7 +144,7 @@ class RequestBodySchema(Schema):
 
     description: Optional[str]
     # TODO Fix this type
-    content: Optional[Tuple[MediaType, Schema]]
+    content: Optional[Dict[MediaType, MediaToFieldMappingSchema]]
     required: bool = False
 
 
@@ -162,7 +175,7 @@ class HttpMethodSchema(Schema):
     tags: Optional[List[str]]
     summary: Optional[str]
     description: Optional[str]
-    operationId: Optional[str]
+    operation_id: Optional[str]
     parameters: Optional[List[ParamSchema]]
     # The str for `responses` are the status codes,
     # e.g. {'200': ResponseSchema()}
@@ -171,6 +184,11 @@ class HttpMethodSchema(Schema):
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
+
+        if 'operation_id' in d:
+            d['operationId'] = d['operation_id']
+            del d['operation_id']
+
         if 'request_body' in d:
             d['requestBody'] = d['request_body']
             del d['request_body']
