@@ -26,7 +26,7 @@ from ._yaml import make_yaml_ordered
 class ComponentBuilder:
 
     def __init__(self):
-        self._builds: Dict[str, Any] = {}
+        self.builds: Dict[str, Any] = {}
 
     def __call__(
             self, *,
@@ -38,11 +38,11 @@ class ComponentBuilder:
             if inspect.isclass(f_or_cls):
                 # Classes will get decorated **after** their methods.
                 # This leaves us with the opportunity to collect all
-                # the necessary builds and neatly package it in `_builds`
+                # the necessary builds and neatly package it in `builds`
                 # for the OpenApiObject.
                 _cls = inject_component(f_or_cls)
 
-                self._builds[_cls.__name__] = create_schema(
+                self.builds[_cls.__name__] = create_schema(
                     _cls, description=_cls.__doc__,
                     # This is the only place we would build the
                     # actual object, everywhere else would use
@@ -83,12 +83,12 @@ class ComponentBuilder:
     def as_yaml(self, filename):
         with make_yaml_ordered(yaml) as _yaml:
             with open(filename, 'w') as f:
-                _yaml.dump(self._builds, f, allow_unicode=True)
+                _yaml.dump(self.builds, f, allow_unicode=True)
 
     def as_dict(self):
         schemas = {
             name: schema.dict()
-            for name, schema in self._builds.items()
+            for name, schema in self.builds.items()
         }
         return {
             'components': {
@@ -159,7 +159,7 @@ class InfoObjectBuilder:
     _field_keys = InfoSchema.__fields__.keys()
 
     def __init__(self):
-        self._builds = None  # type: InfoSchema
+        self.builds = None  # type: InfoSchema
 
     def __call__(self, cls):
         try:
@@ -176,10 +176,10 @@ class InfoObjectBuilder:
             # all fields.
             # See:
             # https://pydantic-docs.helpmanual.io/usage/models/#required-fields
-            self._builds = info_object
+            self.builds = info_object
 
     def as_dict(self):
-        return {'info': self._builds.dict()}
+        return {'info': self.builds.dict()}
 
 
 # TODO Nullable values should not be included with regards to pydantic objects.
@@ -320,7 +320,7 @@ class PathBuilder:
 
         # `paths` can be multiple paths, so they are
         # represented as an array.
-        self._builds = []
+        self.builds = []
 
     def __call__(
             self, *,
@@ -361,7 +361,7 @@ class PathBuilder:
                         # Here we finally append the path param.
                         schema[method_name]['parameters'].append(path_params)
 
-                self._builds.append(schema)
+                self.builds.append(schema)
             else:
                 _f = f_or_cls
 
@@ -459,18 +459,18 @@ class OpenApiBuilder:
         self.info = InfoObjectBuilder()
         self.server = ServerBuilder()
 
-        self._builds = {}
+        self.builds = {}
 
     def as_dict(self):
         info = self.info.as_dict()
         servers = self.server.as_dict()
         comp = self.component.as_dict()
-        self._builds = OrderedDict([
+        self.builds = OrderedDict([
             ("info", info["info"]),
             ("servers", servers["servers"]),
             ("components", comp["components"])
         ])
-        return self._builds
+        return self.builds
 
     def as_yaml(self, filename):
         with make_yaml_ordered(yaml) as _yaml:
