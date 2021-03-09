@@ -80,21 +80,21 @@ class InfoSchema(Schema):
 
 
 # Server schemas
-class ServerVariableObject(Schema):
+class ServerVariableSchema(Schema):
 
     enum: Optional[List[str]]
     default: str
     description: Optional[str]
 
 
-class ServerObject(Schema):
+class ServerSchema(Schema):
     """Serialized Server Object.
     """
 
     url: str
     description: Optional[str]
     # Not sure if Pydantic can handle typing.Mapping
-    variables: Optional[Dict[str, ServerVariableObject]]
+    variables: Optional[Dict[str, ServerVariableSchema]]
 
 
 # Path schemas
