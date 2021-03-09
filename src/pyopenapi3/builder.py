@@ -7,19 +7,17 @@ from pydantic import ValidationError
 
 from .utils import (
     _format_description,
-    _issubclass,
-    create_object,
-    create_reference,
-    convert_type_to_schema,
+    build_property_schema_from_func,
     mark_component_and_attach_schema,
     get_name_and_type,
-    create_schema
+    create_schema,
+    inject_component
 )
 from .typedefs import (
     OpenApiObject
 )
-from .fields import Field
-from .objects import (
+from .objects import Field
+from .schemas import (
     InfoObject,
     ServerObject,
     Response,
@@ -45,45 +43,38 @@ class ComponentBuilder:
                 # This leaves us with the opportunity to collect all
                 # the necessary builds and neatly package it in `_builds`
                 # for the OpenApiObject.
-                _cls = f_or_cls
+                _cls = inject_component(f_or_cls)
 
-                self._builds[_cls.__name__] = create_object(
-                    _cls, descr=_format_description(_cls.__doc__)
+                self._builds[_cls.__name__] = create_schema(
+                    _cls, description=_cls.__doc__,
+                    # This is the only place we would build the
+                    # actual object, everywhere else would use
+                    # a reference.
+                    is_reference=False
                 )
+
+                # The 'injected' class should be returned
+                # so that other classes that use this class
+                # as a property will be able to find it.
+                f_or_cls = _cls
             else:
                 # A wrapped method.
                 _f = f_or_cls
 
-                schema_type = _f.__annotations__['return']
-                property_name = _f.__name__
-
-                open_api_obj = {property_name: None}
-                # If the return object is an OpenApiObject, then
-                # we save the build in a dictionary hosted on Builder
-                # and simply refer to it as a property of the outer
-                # object.
-                if _issubclass(schema_type, OpenApiObject):
-                    open_api_obj[property_name] = create_reference(
-                        # e.g. '#/components/schemas/Customer'
-                        # where 'Customer' == schema_object.__name__.
-                        schema_type.__name__
-                    )
-                    if schema_type.__name__ not in self._builds:
-                        self._builds[schema_type] = create_object(
-                            schema_type,
-                            descr=_format_description(schema_type.__doc__)
-                        )
-                else:
-                    open_api_obj[property_name] = convert_type_to_schema(
-                        schema_type,
-                        descr=_format_description(schema_type.__doc__),
-                        read_only=read_only,
-                        example=example
-                    )
+                # Build the property for the given custom Component
+                # object, e.g. {'id': {'type': 'integer'}}
+                component_schema = build_property_schema_from_func(
+                    _f, read_only=read_only, example=example
+                )
 
                 # This will be used by other utils to find
                 # schemas and build them.
-                mark_component_and_attach_schema(_f, open_api_obj)
+                mark_component_and_attach_schema(
+                    _f,
+                    {_f.__name__: component_schema.dict()}
+                )
+
+                f_or_cls = _f
 
             return f_or_cls
 
@@ -98,7 +89,15 @@ class ComponentBuilder:
                 _yaml.dump(self._builds, f, allow_unicode=True)
 
     def as_dict(self):
-        return {'components': {'schemas': self._builds}}
+        schemas = {
+            name: schema.dict()
+            for name, schema in self._builds.items()
+        }
+        return {
+            'components': {
+                'schemas': schemas
+            }
+        }
 
 
 """

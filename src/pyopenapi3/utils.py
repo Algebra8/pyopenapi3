@@ -1,6 +1,7 @@
-from typing import Optional, Any, Union, Dict, Type, Tuple, cast
+from typing import Optional, Any, Union, Type, Tuple, cast, Callable, Dict
 import inspect
 from string import Formatter
+import functools
 
 from .objects import (
     Number,
@@ -11,16 +12,10 @@ from .objects import (
     Field,
     is_arb_type,
     Primitive,
-    Component
-)
-import pyopenapi3.objects  # Used to get a class from a name.
-from .typedefs import (
-    OpenApiSchema,
-    ObjectSchema,
-    # PrimitiveSchema,
-    # ArraySchema,
+    Component,
     OpenApiObject
 )
+import pyopenapi3.objects  # Used to get a class from a name.
 from .schemas import (
     ArraySchema,
     ComponentSchema,
@@ -28,10 +23,9 @@ from .schemas import (
     PrimitiveSchema,
     Schema
 )
-from ._yaml import Ref
 
 
-OPENAPI_DEF = '__OPENAPIDEF__'
+OPENAPI_DEF = '__OPENAPIDEF__FIELD_OR_COMPONENT__'
 
 
 # Helper for formating descriptions.
@@ -107,133 +101,8 @@ def parse_numbers(n):
         return {'type': 'integer', 'format': n.__name__.lower()}
 
 
-# def create_schema(
-#         schema_type: Union[Type[Field], OpenApiObject],
-#         # If `schema_type` is some subclass of `OpenApiObject`,
-#         # then we might want to just return a reference to the
-#         # object.
-#         reference_only: bool = False
-# ) -> Any:
-#     if _issubclass(schema_type, OpenApiObject):
-#         if reference_only:
-#             return create_reference(schema_type.__name__)
-#         else:
-#             return create_object(schema_type, descr=schema_type.__doc__)
-#     else:
-#         return convert_type_to_schema(schema_type, descr=None,
-#                                       read_only=False, example=None)
-
-
-def create_object(
-        _cls, *, descr: Optional[str]
-) -> ObjectSchema:
-    """Convert a Python class to an OpenAPI format.
-
-    The entrypoint for conversion.
-    """
-    schema = ObjectSchema(
-        type='object',
-        description=descr,
-        properties={}
-    )
-
-    for attr in _cls.__dict__.values():
-        if hasattr(attr, OPENAPI_DEF):
-            prop_data = getattr(attr, OPENAPI_DEF)
-            schema['properties'].update(prop_data)
-
-    return schema
-
-
-# TODO change name from PropertyObject to SchemaObject
-
-
-def create_primitive(
-        primitive, *,
-        descr: Optional[str],
-        read_only: bool,
-        example: Optional[Any]
-) -> PrimitiveSchema:
-    """Build an Open API 3.0.0 primitive schema.
-    """
-    # TODO change parse_attr name to something more
-    #  informative like parse_primitive.
-    schema = PrimitiveSchema(**parse_attr(primitive))
-    if descr is not None:
-        schema['description'] = descr
-    if read_only:
-        # This may seem redundant but we do not want to
-        # clutter the OpenAPI definition with 'readOnly = false'.
-        # So doing something like `propdata['readOnly']
-        # = read_only` in the outer scope is not an option.
-        schema['readOnly'] = True
-    if example is not None:
-        schema['example'] = example
-    return schema
-
-
 def create_reference(name: str) -> ReferenceSchema:
     return ReferenceSchema(ref=f"#/components/schemas/{name}")
-
-
-def create_array(arr: Array) -> ArraySchema:
-    """Build an Open API 3.0.0 array schema.
-    """
-    schema = ArraySchema(type='array', items={})
-
-    def _assign_type(__type):
-        return (
-            parse_attr(__type) if _issubclass(__type, Field)
-            else create_reference(__type.__name__)
-        )
-
-    if len(arr) == 1:
-        # The array only holds one type: could be
-        # a specific schema or arbitrary types (aka ...).
-        if is_arb_type(arr[0]):
-            return schema
-        schema['items'] = _assign_type(arr[0])
-    else:
-        # The array is a "mixed-type array",
-        # e.g. ["foo", 5, -2, "bar"]
-        schema['items'] = {'oneOf': []}
-        for _type in arr:
-            schema['items']['oneOf'].append(
-                _assign_type(_type)
-            )
-
-    return schema
-
-
-def convert_type_to_schema(
-        __type, *,
-        descr: Optional[str],
-        read_only: bool,
-        example: Optional[Any]
-) -> Union[PrimitiveSchema, ArraySchema]:
-    """Flow controller for the type to schema conversion.
-
-    Will differentiate between an Array or Primitive and return
-    the correct schema.
-    """
-    schema: Dict[str, OpenApiSchema]
-
-    # Array.__class_getitem__ will return an instance of
-    # an Array object, so using issubclass will break and
-    # using _issubclass will miss the mark.
-    if isinstance(__type, Array) or issubclass(__type, Field):
-        if isinstance(__type, Array):
-            schema = create_array(__type)
-        else:
-            # Primitive type.
-            schema = create_primitive(
-                __type, descr=descr,
-                read_only=read_only, example=example
-            )
-    else:
-        raise ValueError("Not a valid field.")
-
-    return schema
 
 
 def mark_component_and_attach_schema(obj, schema):
@@ -263,7 +132,10 @@ def create_schema(
         return convert_array_to_schema(__type)
     if issubclass(__type, Component):
         assert is_reference is not None
-        return convert_component_to_schema(__type, is_reference)
+        return convert_component_to_schema(
+            __type, description=description,
+            is_reference=is_reference
+        )
 
 
 def convert_component_to_schema(
@@ -282,7 +154,7 @@ def _convert_component_to_schema(
         component: Type[Component],
         description: Optional[str]
 ) -> ComponentSchema:
-    """Only converts non-reference Component objects."""
+    """Convert non-reference Component object."""
     schema = ComponentSchema(description=description)
     for attr in component.__dict__.values():
         if hasattr(attr, OPENAPI_DEF):
@@ -306,7 +178,6 @@ def convert_primitive_to_schema(
         schema.readOnly = True
     if example is not None:
         schema.example = example
-
     return schema
 
 
@@ -348,4 +219,61 @@ def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
                 )
             )
     return schema
+
+
+def build_property_schema_from_func(
+        f: Callable, *,
+        # `read_only` and `example` are
+        # inputted from the user directly.
+        read_only: Optional[bool],
+        example: Optional[Any],
+) -> Schema:
+    """Convert data on a custom object's method to a Field
+    or Component schema and return its Open API representation,
+    i.e. {name: schema}.
+    """
+    if not hasattr(f, '__annotations__'):
+        raise ValueError("Must include 'return' annotations.")
+
+    property_type = f.__annotations__['return']
+    property_name = f.__name__
+    description = f.__doc__
+
+    schema = create_schema(
+        property_type, description=_format_description(description),
+        read_only=read_only, example=example,
+        # If a custom object is found here, then it
+        # should only be referenced.
+        is_reference=True
+    )
+
+    return schema
+
+
+def inject_component(cls):
+    """'Inject' the `Component` class into the custom, user defined,
+    soon-to-be Component, class.
+
+    This will help when building a property that involves a user defined
+    custom Component.
+    """
+    if issubclass(cls, Component):
+        return cls
+    else:
+        # @functools.wraps(cls, updated=())
+        # class Injected(cls, Component):
+        #     pass
+        injected = type(
+            "Injected",
+            (cls, Component),
+            {attr_name: attr for attr_name, attr in cls.__dict__.items()}
+        )
+        injected.__qualname__ = f'Component[{cls.__name__}]'
+        # Make sure not to override name, because it will be
+        # used in the conversion to an Open API object, e.g.
+        # {__name__: <rest of properties>}.
+        injected.__name__ = cls.__name__
+
+        return injected
+
 
