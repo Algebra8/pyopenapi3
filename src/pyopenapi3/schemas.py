@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class Schema(BaseModel):
 
     def dict(self, *, exclude_none=True, **kwargs):
-        """Make default `dict` method excludes `None`s by default."""
+        """Make default `dict` method exclude `None`s by default."""
         return super().dict(exclude_none=exclude_none, **kwargs)
 
 
