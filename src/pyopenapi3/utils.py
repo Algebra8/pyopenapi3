@@ -1,4 +1,4 @@
-from typing import Optional, Any, Union, Dict, Type
+from typing import Optional, Any, Union, Dict, Type, Tuple, cast
 import inspect
 from string import Formatter
 
@@ -107,21 +107,21 @@ def parse_numbers(n):
         return {'type': 'integer', 'format': n.__name__.lower()}
 
 
-def create_schema(
-        schema_type: Union[Type[Field], OpenApiObject],
-        # If `schema_type` is some subclass of `OpenApiObject`,
-        # then we might want to just return a reference to the
-        # object.
-        reference_only: bool = False
-) -> Any:
-    if _issubclass(schema_type, OpenApiObject):
-        if reference_only:
-            return create_reference(schema_type.__name__)
-        else:
-            return create_object(schema_type, descr=schema_type.__doc__)
-    else:
-        return convert_type_to_schema(schema_type, descr=None,
-                                      read_only=False, example=None)
+# def create_schema(
+#         schema_type: Union[Type[Field], OpenApiObject],
+#         # If `schema_type` is some subclass of `OpenApiObject`,
+#         # then we might want to just return a reference to the
+#         # object.
+#         reference_only: bool = False
+# ) -> Any:
+#     if _issubclass(schema_type, OpenApiObject):
+#         if reference_only:
+#             return create_reference(schema_type.__name__)
+#         else:
+#             return create_object(schema_type, descr=schema_type.__doc__)
+#     else:
+#         return convert_type_to_schema(schema_type, descr=None,
+#                                       read_only=False, example=None)
 
 
 def create_object(
@@ -299,5 +299,37 @@ def convert_primitive_to_schema(
 
 def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
     """Convert a concrete array type to an ArraySchema."""
-    return ArraySchema(f'asd {array}')
+    schema = ArraySchema(type='array', items={})
+
+    # The types contained in the Array:
+    # Array[int, str] -> tvars = (int, str)
+    tvars: Tuple[
+        Union[
+            Type[Component],
+            Type[Field]
+        ]
+    ] = array.tvars
+    if len(tvars) == 1:
+        # The array only holds one type: could be
+        # a specific schema or arbitrary types (aka ...).
+        if is_arb_type(tvars[0]):
+            return schema
+        schema.items = create_schema(
+            cast(Type[OpenApiObject], tvars[0]),
+            # In case it is a custom object,
+            # only pass in a reference
+            is_reference=True
+        )
+    else:
+        # The array is a "mixed-type array",
+        # e.g. ["foo", 5, -2, "bar"]
+        schema.items = {'oneOf': []}
+        for t in tvars:
+            schema.items['oneOf'].append(
+                create_schema(
+                    cast(Type[OpenApiObject], t),
+                    if_reference=True
+                )
+            )
+    return schema
 
