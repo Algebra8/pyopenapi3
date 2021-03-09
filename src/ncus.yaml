@@ -1,0 +1,14 @@
+components:
+  schemas:
+    Customer:
+      description: A customer
+      properties:
+        email:
+          description: An email
+          format: email
+          type: string
+        id:
+          description: An id
+          format: int64
+          type: integer
+      type: object
