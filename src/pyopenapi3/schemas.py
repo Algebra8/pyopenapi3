@@ -6,9 +6,17 @@ from pydantic.generics import GenericModel
 
 class Schema(BaseModel):
 
-    def dict(self, *, exclude_none=True, **kwargs):
-        """Make default `dict` method exclude `None`s by default."""
-        return super().dict(exclude_none=exclude_none, **kwargs)
+    class Config:
+
+        allow_population_by_field_name = True
+
+    def dict(self, *, exclude_none=True, by_alias=True, **kwargs):
+        """Make `dict` exclude `None`s and use aliases by default."""
+        return super().dict(
+            exclude_none=exclude_none,
+            by_alias=by_alias,
+            **kwargs
+        )
 
 
 # Field Schemas
@@ -42,14 +50,7 @@ class ComponentSchema(Schema):
 
 class ReferenceSchema(Schema):
 
-    ref: str
-
-    def dict(self, *args, **kwargs):
-        """Return $ref as key for reference."""
-        d = super().dict(*args, **kwargs)
-        d["$ref"] = d["ref"]
-        del d["ref"]
-        return d
+    ref: str = Field(..., alias="$ref")
 
 
 FieldSchema = Union[
@@ -76,16 +77,9 @@ class InfoSchema(Schema):
     title: str
     version: str
     description: Optional[str]
-    terms_of_service: Optional[str]
+    terms_of_service: Optional[str] = Field(..., alias="termsOfService")
     contact: Optional[ContactObject]
     license: Optional[LicenseObject]
-
-    def dict(self, *args, **kwargs):
-        d = super().dict(*args, **kwargs)
-        if 'terms_of_service' in d:
-            d['termsOfService'] = d['terms_of_service']
-            del d['terms_of_service']
-        return d
 
 
 # Server schemas
