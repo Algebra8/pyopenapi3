@@ -133,7 +133,12 @@ class ResponseSchema(Schema):
     content: Optional[List[Tuple[MediaType, Schema]]]
 
 
-SchemaT = TypeVar("SchemaT")
+SchemaT = TypeVar("SchemaT", bound=Schema)
+FieldSchemaT = TypeVar(
+    "FieldSchemaT",
+    PrimitiveSchema, ArraySchema,
+    ComponentSchema, ReferenceSchema
+)
 
 
 class SchemaMapping(GenericModel, Generic[SchemaT]):
@@ -142,11 +147,10 @@ class SchemaMapping(GenericModel, Generic[SchemaT]):
 
     def dict(self, *args, by_alias=True, **kwargs):
         """Return alias by default."""
-        print(self)
         return super().dict(*args, by_alias=by_alias, **kwargs)
 
 
-class RequestBodySchema(GenericModel, Generic[SchemaT]):
+class RequestBodySchema(GenericModel, Generic[FieldSchemaT]):
     """Serialized Request Body Object.
     """
 
@@ -154,11 +158,15 @@ class RequestBodySchema(GenericModel, Generic[SchemaT]):
         arbitrary_types_allowed = True
 
     description: Optional[str]
-    content: Optional[Dict[MediaType, SchemaMapping[SchemaT]]]
+    content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
     required: bool = False
 
 
 class ParamSchema(SchemaMapping[Schema]):
+
+    class Config:
+
+        allow_population_by_field_name = True
 
     name: str
     # alias will be returned by default.
