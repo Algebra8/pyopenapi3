@@ -1,6 +1,7 @@
-from typing import Optional, Dict, List, Tuple, Any, Union
+from typing import Optional, Dict, List, Tuple, Any, Union, Generic, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from pydantic.generics import GenericModel
 
 
 class Schema(BaseModel):
@@ -108,6 +109,8 @@ class ServerSchema(Schema):
 # Path schemas
 class MediaType(str):
 
+    # TODO use_enum_values
+
     json = "application/json"
     xml = "application/xml"
     pdf = "application/pdf"
@@ -130,12 +133,20 @@ class ResponseSchema(Schema):
     content: Optional[List[Tuple[MediaType, Schema]]]
 
 
-class MediaToFieldMappingSchema(Schema):
-
-    schema: FieldSchema
+SchemaT = TypeVar("SchemaT")
 
 
-class RequestBodySchema(Schema):
+class SchemaMapping(GenericModel, Generic[SchemaT]):
+
+    schema_field: SchemaT = Field(..., alias='schema')
+
+    def dict(self, *args, by_alias=True, **kwargs):
+        """Return alias by default."""
+        print(self)
+        return super().dict(*args, by_alias=by_alias, **kwargs)
+
+
+class RequestBodySchema(GenericModel, Generic[SchemaT]):
     """Serialized Request Body Object.
     """
 
@@ -143,31 +154,18 @@ class RequestBodySchema(Schema):
         arbitrary_types_allowed = True
 
     description: Optional[str]
-    # TODO Fix this type
-    content: Optional[Dict[MediaType, MediaToFieldMappingSchema]]
+    content: Optional[Dict[MediaType, SchemaMapping[SchemaT]]]
     required: bool = False
 
 
-class ParamSchema(Schema):
+class ParamSchema(SchemaMapping[Schema]):
 
     name: str
-    __in: str
+    # alias will be returned by default.
+    # See `SchemaMapping`.
+    in_field: str = Field(..., alias='in')
     description: Optional[str]
     required: bool = False
-    _schema: Schema
-
-    def dict(self, *args, **kwargs):
-        d = super().dict(*args, **kwargs)
-
-        # __in -> in
-        d['in'] = d['__in']
-        del d['__in']
-
-        # _schema -> schema
-        d['schema'] = d['_schema']
-        del d['_schema']
-
-        return d
 
 
 class HttpMethodSchema(Schema):
