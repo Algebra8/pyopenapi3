@@ -10,16 +10,19 @@ from .utils import (
     mark_component_and_attach_schema,
     get_name_and_type,
     create_schema,
-    inject_component
+    inject_component,
+    _format_description
 )
 
 from .objects import Field, Component
 from .schemas import (
     InfoSchema,
     ServerSchema,
-    Response,
-    RequestBody,
-    ParamSchema
+    ResponseSchema,
+    RequestBodySchema,
+    ParamSchema,
+    PathMappingSchema,
+    HttpMethodSchema
 )
 from ._yaml import make_yaml_ordered
 
@@ -297,7 +300,7 @@ class ParamBuilder:
     ) -> ParamSchema:
         try:
             param = self._schema(
-                name=name, __in=self.__in,
+                name=name, in_field=self.__in,
                 description=description, required=required,
                 allow_reserved=allow_reserved,
                 schema=create_schema(field)
@@ -333,7 +336,7 @@ class PathBuilder:
 
         # There can be multiple `paths`, so they are
         # represented as an array.
-        self.builds = []
+        self.builds = None  # type: PathMappingSchema
 
     def __call__(
             self, *,
@@ -379,30 +382,25 @@ class PathBuilder:
             else:
                 _f = f_or_cls
 
-                schema = {}
-                if tags is not None:
-                    schema['tags'] = tags
-                if summary is not None:
-                    schema['summary'] = summary
-                if operation_id is not None:
-                    schema['operationId'] = operation_id
-                if _f.__doc__ is not None:
-                    schema['description'] = _f.__doc__
+                HttpMethodSchema(
+                    tags=tags, summary=summary, operation_id=operation_id,
+                    description=_format_description(_f.__doc__),
+                    # Get any type of param except for the path.
+                    # The path param is retrieved from `path` set on the
+                    # clients class, which won't be reached until we run
+                    # through the class itself. Notice that there is no
+                    # cls.path_param, but there are other types of params.
+                    parameters=ParamBuilder.get_params_from_method(_f),
 
-                # Get any type of param except for the path.
-                # The path param is retrieved from `path` set on the
-                # clients class, which won't be reached until we run
-                # through the class itself. Notice that there is no
-                # cls.path_param, but there are other types of params.
-                schema['parameters'] = ParamBuilder.get_params_from_method(_f)
+                )
 
                 # Parse the responses and request body from the annots
                 # and then validate them.
                 # Once they are validated they can be attached to the
                 # given method.
                 method_annots = _f.__annotations__['return']
-                request_body: Union[RequestBody, Dict[str, Any]]
-                responses: List[Union[Response, Dict[str, Any]]]
+                request_body: Union[RequestBodySchema, Dict[str, Any]]
+                responses: List[Union[ResponseSchema, Dict[str, Any]]]
                 if hasattr(method_annots, '_name'):
                     # typing.Tuple
                     request_body, responses = method_annots.__args__
@@ -411,10 +409,10 @@ class PathBuilder:
 
                 _validated_request_body: Dict[str, Any]
                 _validated_responses: List[Dict[str, Any]] = []
-                if not isinstance(request_body, RequestBody):
+                if not isinstance(request_body, RequestBodySchema):
                     # Need to validate the attrs.
                     try:
-                        RequestBody(**request_body)
+                        RequestBodySchema(**request_body)
                     except ValidationError as e:
                         # TODO better error handling
                         print(e.json())
@@ -425,9 +423,9 @@ class PathBuilder:
                     _validated_request_body = request_body.dict()
 
                 for response in responses:
-                    if not isinstance(response, Response):
+                    if not isinstance(response, ResponseSchema):
                         try:
-                            Response(**response)
+                            ResponseSchema(**response)
                         except ValidationError as e:
                             # TODO better error handling
                             print(e.json())
@@ -445,17 +443,6 @@ class PathBuilder:
             return f_or_cls
 
         return wrapper
-
-    # @staticmethod
-    # def _create_param(name, _type):
-    #     schema = {
-    #         'name': None,
-    #         'in': None,
-    #         'description': None,
-    #         'required':
-    #     }
-    #
-    #     return name
 
 
 class OpenApiBuilder:
