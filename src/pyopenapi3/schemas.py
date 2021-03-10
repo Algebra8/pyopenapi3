@@ -139,10 +139,6 @@ class SchemaMapping(GenericModel, Generic[SchemaT]):
 
     schema_field: SchemaT = Field(..., alias='schema')
 
-    def dict(self, *args, by_alias=True, **kwargs):
-        """Return alias by default."""
-        return super().dict(*args, by_alias=by_alias, **kwargs)
-
 
 class RequestBodySchema(GenericModel, Generic[FieldSchemaT]):
     """Serialized Request Body Object.
@@ -175,24 +171,12 @@ class HttpMethodSchema(Schema):
     tags: Optional[List[str]]
     summary: Optional[str]
     description: Optional[str]
-    operation_id: Optional[str]
+    operation_id: Optional[str] = Field(..., alias="operationId")
     parameters: Optional[List[ParamSchema]]
     # The str for `responses` are the status codes,
     # e.g. {'200': ResponseSchema()}
     responses: Dict[str, ResponseSchema]
-    request_body: Optional[RequestBodySchema]
-
-    def dict(self, *args, **kwargs):
-        d = super().dict(*args, **kwargs)
-
-        if 'operation_id' in d:
-            d['operationId'] = d['operation_id']
-            del d['operation_id']
-
-        if 'request_body' in d:
-            d['requestBody'] = d['request_body']
-            del d['request_body']
-        return d
+    request_body: Optional[RequestBodySchema] = Field(..., alias="requestBody")
 
 
 class HttpMethodMappingSchema(Schema):
