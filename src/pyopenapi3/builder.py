@@ -12,7 +12,8 @@ from .utils import (
     parse_name_and_type_from_fmt_str,
     create_schema,
     inject_component,
-    _format_description
+    _format_description,
+    map_field_to_schema
 )
 
 from .objects import Field, Component, RequestBody, Response
@@ -290,8 +291,9 @@ class ParamBuilder:
         return wrapper
 
     @classmethod
-    def get_params_from_method(cls, method):
-        return getattr(method, cls.defn)
+    def get_params_from_method(cls, method) -> Any:
+        if hasattr(method, cls.defn):
+            return getattr(method, cls.defn)
 
     def build_param(
             self, *, name: str,
@@ -411,22 +413,21 @@ class PathBuilder:
             else:
                 _f = f_or_cls
 
-                method_schema = HttpMethodSchema(
-                    tags=tags, summary=summary, operation_id=operation_id,
-                    description=_format_description(_f.__doc__),
-                    # Get any type of param except for the path.
-                    # The path param is retrieved from `path` set on the
-                    # clients class, which won't be reached until we run
-                    # through the class itself. Notice that there is no
-                    # cls.path_param, but there are other types of params.
-                    parameters=ParamBuilder.get_params_from_method(_f),
-                )
+                # method_schema = HttpMethodSchema(
+                #     tags=tags, summary=summary, operation_id=operation_id,
+                #     description=_format_description(_f.__doc__),
+                #     # Get any type of param except for the path.
+                #     # The path param is retrieved from `path` set on the
+                #     # clients class, which won't be reached until we run
+                #     # through the class itself.
+                #     parameters=ParamBuilder.get_params_from_method(_f),
+                # )
 
                 # Parse the responses and request body from the annots
                 # and then validate them.
                 #
                 # The request, responses could look like this:
-                # `def get(self) -> (RequestBody(...), [Responses]): ...`,
+                # `def get(self) -> (RequestBody(...), [Responses(...)]): ...`,
                 # or they could be wrapped in a typing.Tuple.
                 #
                 # Once they are validated they can be attached to the
@@ -441,34 +442,27 @@ class PathBuilder:
                 else:
                     request_body, responses = method_annots
 
-                # Request body schema building
-                # Need to find out what kind of schema the content is,
-                # if there is one.
+                # Request body schema building.
                 if isinstance(request_body, RequestBody):
                     # Need to validate the attrs.
                     request_body = request_body.as_dict()
-
                 # TODO error handling
                 if 'content' not in request_body:
                     raise ValueError(
                         "'content' has not been provided in the request body."
                     )
-
+                # Need to find out what kind of schema the content is,
+                # if there is one.
                 request_schema_tp = None
                 content = {}
                 for media_type, field_type in request_body['content']:
-                    if issubclass(field_type, Field):
-                        request_schema_tp = RequestBodySchema[field_type]
-                    elif issubclass(field_type, Component):
-                        request_schema_tp = RequestBodySchema[ReferenceSchema]
-                    else:
-                        raise ValueError(
-                            "Must provide a `Field` or custom component."
-                        )
-                    content[media_type] = create_schema(
+                    rqbody_schema_type = map_field_to_schema(
                         field_type, is_reference=True
                     )
-
+                    request_schema_tp = RequestBodySchema[rqbody_schema_type]
+                    content[media_type] = {
+                        'schema': create_schema(field_type, is_reference=True)
+                    }
                 try:
                     request_schema = request_schema_tp(
                         description=request_body.get('description'),
@@ -476,8 +470,10 @@ class PathBuilder:
                         content=content
                     )
                 except ValidationError as e:
-                    print(e.json())
-                    return
+                    # TODO error handling
+                    raise ValueError(f"Uh oh:\n{e.json()}") from None
+                else:
+                    print(f"{request_schema}\n\n{request_schema.dict()}")
 
                 # _validated_responses: List[Dict[str, Any]] = []
                 # for response in responses:

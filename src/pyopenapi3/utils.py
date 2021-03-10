@@ -21,7 +21,8 @@ from .schemas import (
     ComponentSchema,
     ReferenceSchema,
     PrimitiveSchema,
-    Schema
+    Schema,
+    FieldSchemaT
 )
 
 
@@ -281,3 +282,17 @@ def inject_component(cls):
         return injected
 
 
+def map_field_to_schema(
+        field_type, is_reference: bool = False) -> Type[FieldSchemaT]:
+    if issubclass(field_type, Primitive):
+        return PrimitiveSchema
+    elif issubclass(field_type, Array):
+        return ArraySchema
+    elif issubclass(field_type, Component):
+        if is_reference:
+            return ReferenceSchema
+        return ComponentSchema
+    else:
+        raise ValueError(
+            "Must provide a `Field` or custom component."
+        )
