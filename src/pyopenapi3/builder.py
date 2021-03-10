@@ -2,19 +2,20 @@ from typing import Dict, Any, Optional, List, Union, Type
 import yaml
 import inspect
 from collections import OrderedDict
+import re
 
 from pydantic import ValidationError  # type: ignore
 
 from .utils import (
     build_property_schema_from_func,
     mark_component_and_attach_schema,
-    get_name_and_type,
+    parse_name_and_type_from_fmt_str,
     create_schema,
     inject_component,
     _format_description
 )
 
-from .objects import Field, Component
+from .objects import Field, Component, RequestBody, Response
 from .schemas import (
     InfoSchema,
     ServerSchema,
@@ -22,7 +23,8 @@ from .schemas import (
     RequestBodySchema,
     ParamSchema,
     PathMappingSchema,
-    HttpMethodSchema
+    HttpMethodSchema,
+    ReferenceSchema
 )
 from ._yaml import make_yaml_ordered
 
@@ -308,7 +310,7 @@ class ParamBuilder:
         except ValidationError as e:
             # TODO Error handling
             print(e.json())
-            raise ValueError("Something didn't work.")
+            raise ValueError(f"Something didn't work: {e.json()}") from None
 
         return param
 
@@ -361,28 +363,55 @@ class PathBuilder:
             if inspect.isclass(f_or_cls):
                 _cls = f_or_cls
 
+                # Build the `path` param, e.g. `path = '/users/{id:Int64}'`,
+                # then each method should include an "in: path" param with
+                # the type schema provided in the formatted string.
+
+                # Here we extract any formatted string parameters.
+                # Note there could be multiple for a single `path`.
+                path = _cls.path
                 path_params = []
-                for path_name, schema_type in get_name_and_type(_cls.path):
+                for name, _type in parse_name_and_type_from_fmt_str(path):
                     path_param = ParamBuilder('path').build_param(
-                        name=path_name,
-                        field=schema_type,
+                        name=name,
+                        field=_type,
                         required=True
                     )
                     path_params.append(path_param)
 
-                schema = {}
+                if path_params:
+                    # Open API doesn't want "{name:type}", just "{name}".
+                    path = re.sub(
+                        "{([^}]*)}",
+                        lambda mo: "{" + mo.group(1).split(':')[0] + "}",
+                        _cls.path
+                    )
+
+                # Here we do two things:
+                #   - get the schemas from each method, e.g. `get`, `post`.
+                #   - bake in the path param, if there is one, extracted
+                #       above into each method.
+                schema = {path: {}}
                 for name, val in _cls.__dict__.items():
-                    if name.lower() in self._methods:
+                    if (
+                            name.lower() in self._methods and
+                            hasattr(val, self.method_defn)
+                    ):
                         method_name = name.lower()
                         schema[method_name] = getattr(val, self.method_defn)
                         # Here we finally append the path param.
                         schema[method_name]['parameters'].append(path_params)
 
-                self.builds.append(schema)
+                if self.builds is None:
+                    self.builds = PathMappingSchema(**{'paths': schema})
+                else:
+                    z = self.builds.dict()
+                    z['paths'].update(schema)
+                    self.builds = PathMappingSchema(**z)
             else:
                 _f = f_or_cls
 
-                HttpMethodSchema(
+                method_schema = HttpMethodSchema(
                     tags=tags, summary=summary, operation_id=operation_id,
                     description=_format_description(_f.__doc__),
                     # Get any type of param except for the path.
@@ -391,54 +420,83 @@ class PathBuilder:
                     # through the class itself. Notice that there is no
                     # cls.path_param, but there are other types of params.
                     parameters=ParamBuilder.get_params_from_method(_f),
-
                 )
 
                 # Parse the responses and request body from the annots
                 # and then validate them.
+                #
+                # The request, responses could look like this:
+                # `def get(self) -> (RequestBody(...), [Responses]): ...`,
+                # or they could be wrapped in a typing.Tuple.
+                #
                 # Once they are validated they can be attached to the
                 # given method.
+                request_body: Union[RequestBody, Dict[str, Any]]
+                responses: List[Union[Response, Dict[str, Any]]]
+
                 method_annots = _f.__annotations__['return']
-                request_body: Union[RequestBodySchema, Dict[str, Any]]
-                responses: List[Union[ResponseSchema, Dict[str, Any]]]
                 if hasattr(method_annots, '_name'):
                     # typing.Tuple
                     request_body, responses = method_annots.__args__
                 else:
                     request_body, responses = method_annots
 
-                _validated_request_body: Dict[str, Any]
-                _validated_responses: List[Dict[str, Any]] = []
-                if not isinstance(request_body, RequestBodySchema):
+                # Request body schema building
+                # Need to find out what kind of schema the content is,
+                # if there is one.
+                if isinstance(request_body, RequestBody):
                     # Need to validate the attrs.
-                    try:
-                        RequestBodySchema(**request_body)
-                    except ValidationError as e:
-                        # TODO better error handling
-                        print(e.json())
-                        return
+                    request_body = request_body.as_dict()
+
+                # TODO error handling
+                if 'content' not in request_body:
+                    raise ValueError(
+                        "'content' has not been provided in the request body."
+                    )
+
+                request_schema_tp = None
+                content = {}
+                for media_type, field_type in request_body['content']:
+                    if issubclass(field_type, Field):
+                        request_schema_tp = RequestBodySchema[field_type]
+                    elif issubclass(field_type, Component):
+                        request_schema_tp = RequestBodySchema[ReferenceSchema]
                     else:
-                        _validated_request_body = request_body
-                else:
-                    _validated_request_body = request_body.dict()
+                        raise ValueError(
+                            "Must provide a `Field` or custom component."
+                        )
+                    content[media_type] = create_schema(
+                        field_type, is_reference=True
+                    )
 
-                for response in responses:
-                    if not isinstance(response, ResponseSchema):
-                        try:
-                            ResponseSchema(**response)
-                        except ValidationError as e:
-                            # TODO better error handling
-                            print(e.json())
-                            return
-                        else:
-                            _validated_responses.append(response)
-                    else:
-                        _validated_responses.append(response.dict())
+                try:
+                    request_schema = request_schema_tp(
+                        description=request_body.get('description'),
+                        required=request_body.get('required'),
+                        content=content
+                    )
+                except ValidationError as e:
+                    print(e.json())
+                    return
 
-                schema['requestBody'] = _validated_request_body
-                schema['responses'] = _validated_responses
+                # _validated_responses: List[Dict[str, Any]] = []
+                # for response in responses:
+                #     if not isinstance(response, Response):
+                #         try:
+                #             ResponseSchema(**response)
+                #         except ValidationError as e:
+                #             # TODO better error handling
+                #             print(e.json())
+                #             return
+                #         else:
+                #             _validated_responses.append(response)
+                #     else:
+                #         _validated_responses.append(response.dict())
 
-                setattr(_f, self.method_defn, schema)
+                # schema['requestBody'] = _validated_request_body
+                # schema['responses'] = _validated_responses
+                #
+                # setattr(_f, self.method_defn, schema)
 
             return f_or_cls
 
@@ -459,6 +517,7 @@ class OpenApiBuilder:
         self.component = ComponentBuilder()
         self.info = InfoObjectBuilder()
         self.server = ServerBuilder()
+        self.path = PathBuilder()
 
         self.builds = {}
 
