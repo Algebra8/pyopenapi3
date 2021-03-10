@@ -32,6 +32,7 @@ class PrimitiveSchema(Schema):
 class ArraySchema(Schema):
 
     class Config:
+
         arbitrary_types_allowed = True
 
     type: str
@@ -120,6 +121,7 @@ class ResponseSchema(Schema):
     """
 
     class Config:
+
         arbitrary_types_allowed = True
 
     status: int
@@ -135,16 +137,17 @@ FieldSchemaT = TypeVar(
 )
 
 
-class SchemaMapping(GenericModel, Generic[SchemaT]):
+class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
 
 
-class RequestBodySchema(GenericModel, Generic[FieldSchemaT]):
+class RequestBodySchema(GenericModel, Generic[FieldSchemaT], Schema):
     """Serialized Request Body Object.
     """
 
     class Config:
+
         arbitrary_types_allowed = True
 
     description: Optional[str]
@@ -152,11 +155,7 @@ class RequestBodySchema(GenericModel, Generic[FieldSchemaT]):
     required: bool = False
 
 
-class ParamSchema(SchemaMapping[Schema]):
-
-    class Config:
-
-        allow_population_by_field_name = True
+class ParamSchema(SchemaMapping[FieldSchemaT]):
 
     name: str
     # alias will be returned by default.
