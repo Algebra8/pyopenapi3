@@ -116,19 +116,6 @@ class MediaType(str):
     png = "image/png"
 
 
-class ResponseSchema(Schema):
-    """Serialized Response Object.
-    """
-
-    class Config:
-
-        arbitrary_types_allowed = True
-
-    status: int
-    description: Optional[str]
-    content: Optional[List[Tuple[MediaType, Schema]]]
-
-
 SchemaT = TypeVar("SchemaT", bound=Schema)
 FieldSchemaT = TypeVar(
     "FieldSchemaT",
@@ -140,6 +127,18 @@ FieldSchemaT = TypeVar(
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
+
+
+class ResponseSchema(GenericModel, Generic[FieldSchemaT], Schema):
+    """Serialized Response Object.
+    """
+
+    class Config:
+
+        arbitrary_types_allowed = True
+
+    description: str
+    content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
 
 
 class RequestBodySchema(GenericModel, Generic[FieldSchemaT], Schema):
