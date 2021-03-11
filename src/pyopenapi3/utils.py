@@ -21,7 +21,8 @@ from .schemas import (
     ComponentSchema,
     ReferenceSchema,
     PrimitiveSchema,
-    Schema
+    Schema,
+    FieldSchemaT
 )
 
 
@@ -39,29 +40,34 @@ def _format_description(s: Optional[str]) -> Optional[str]:
     return " ".join(s.split())
 
 
-def get_name_and_type(formatted_str):
+def parse_name_and_type_from_fmt_str(
+        formatted_str) -> Tuple[Optional[str], Optional[str]]:
     """
     Parse a formatted string and return the names
     of the args and their types.
 
     E.g. "/user/{id:int}" -> ("id", "int")
+
+    If the string is not formatted, then will return (None, None).
     """
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
-        try:
-            yield arg_name, _get_field_from_name(_type_name)
-        except AttributeError:
-            raise ValueError(
-                "A non-`Field` or `OpenApiObject` type was found. "
-                f"Can't use `{_type_name}` as a type in {formatted_str}."
-            ) from None
+        if arg_name is not None:
+            try:
+                yield arg_name, _get_field_from_name(_type_name)
+            except AttributeError:
+                raise ValueError(
+                    "A non-`Field` or `OpenApiObject` type was found. "
+                    f"Can't use `{_type_name}` as a type in {formatted_str}."
+                ) from None
 
 
-def _get_field_from_name(name):
+def _get_field_from_name(name: Optional[str]) -> Optional[Type[Field]]:
     """Get the Field type from a given name.
 
     E.g. "Int64" -> <class 'pyopenapi3.fields.Int64'>
     """
-    return getattr(pyopenapi3.objects, name)
+    if name is not None:
+        return getattr(pyopenapi3.objects, name)
 
 
 # Field parsers.
@@ -276,3 +282,17 @@ def inject_component(cls):
         return injected
 
 
+def map_field_to_schema(
+        field_type, is_reference: bool = False) -> Type[FieldSchemaT]:
+    if issubclass(field_type, Primitive):
+        return PrimitiveSchema
+    elif issubclass(field_type, Array):
+        return ArraySchema
+    elif issubclass(field_type, Component):
+        if is_reference:
+            return ReferenceSchema
+        return ComponentSchema
+    else:
+        raise ValueError(
+            "Must provide a `Field` or custom component."
+        )

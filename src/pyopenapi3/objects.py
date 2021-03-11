@@ -1,5 +1,6 @@
-from typing import Iterable, Any
+from typing import Iterable, Any, Optional, Dict, List, Tuple, Union, Type
 import functools
+from dataclasses import dataclass, asdict
 
 
 class OpenApiObject:
@@ -125,3 +126,23 @@ class Reference(Component):
     ...
 
 
+@dataclass
+class Response(OpenApiObject):
+
+    status: int
+    description: str
+    content: Optional[Dict[str, Any]] = None
+
+    def as_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class RequestBody(OpenApiObject):
+
+    content: List[Tuple[str, Type[Union[Field, Component]]]]
+    description: Optional[str] = None
+    required: bool = False
+
+    def as_dict(self):
+        return asdict(self)

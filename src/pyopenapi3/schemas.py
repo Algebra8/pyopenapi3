@@ -1,6 +1,7 @@
-from typing import Optional, Dict, List, Tuple, Any, Union
+from typing import Optional, Dict, List, Tuple, Any, Union, Generic, TypeVar
 
 from pydantic import BaseModel, Field
+from pydantic.generics import GenericModel
 
 
 class Schema(BaseModel):
@@ -31,6 +32,7 @@ class PrimitiveSchema(Schema):
 class ArraySchema(Schema):
 
     class Config:
+
         arbitrary_types_allowed = True
 
     type: str
@@ -52,6 +54,14 @@ class ReferenceSchema(Schema):
     ref: str = Field(..., alias="$ref")
 
 
+FieldSchema = Union[
+    PrimitiveSchema,
+    ArraySchema,
+    ComponentSchema,
+    ReferenceSchema
+]
+
+
 # Info metadata schemas.
 class ContactObject(Schema):
     ...
@@ -68,7 +78,7 @@ class InfoSchema(Schema):
     title: str
     version: str
     description: Optional[str]
-    terms_of_service: Optional[str] = Field(..., alias="termsOfService")
+    terms_of_service: Optional[str] = Field(None, alias="termsOfService")
     contact: Optional[ContactObject]
     license: Optional[LicenseObject]
 
@@ -94,6 +104,8 @@ class ServerSchema(Schema):
 # Path schemas
 class MediaType(str):
 
+    # TODO use_enum_values
+
     json = "application/json"
     xml = "application/xml"
     pdf = "application/pdf"
@@ -104,35 +116,85 @@ class MediaType(str):
     png = "image/png"
 
 
-class Response(Schema):
+SchemaT = TypeVar("SchemaT", bound=Schema)
+FieldSchemaT = TypeVar(
+    "FieldSchemaT",
+    PrimitiveSchema, ArraySchema,
+    ComponentSchema, ReferenceSchema
+)
+
+
+class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
+
+    schema_field: SchemaT = Field(..., alias='schema')
+
+
+class ResponseSchema(GenericModel, Generic[FieldSchemaT], Schema):
     """Serialized Response Object.
     """
 
     class Config:
+
         arbitrary_types_allowed = True
 
-    status: int
-    description: Optional[str]
-    content: Optional[List[Tuple[MediaType, Schema]]]
+    description: str
+    content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
 
 
-class RequestBody(BaseModel):
+class RequestBodySchema(GenericModel, Generic[FieldSchemaT], Schema):
     """Serialized Request Body Object.
     """
 
     class Config:
+
         arbitrary_types_allowed = True
 
     description: Optional[str]
-    # TODO Fix this type
-    content: Optional[Tuple[MediaType, Schema]]
+    content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
     required: bool = False
+    # TODO add examples
 
 
-class ParamSchema(BaseModel):
+class ParamSchema(SchemaMapping[FieldSchemaT]):
 
     name: str
-    __in: str = Field(..., alias='in')
+    # alias will be returned by default.
+    # See `SchemaMapping`.
+    in_field: str = Field(..., alias='in')
     description: Optional[str]
     required: bool = False
-    schema: Schema
+
+
+class HttpMethodSchema(Schema):
+
+    tags: Optional[List[str]]
+    summary: Optional[str]
+    description: Optional[str]
+    operation_id: Optional[str] = Field(None, alias="operationId")
+    parameters: Optional[List[ParamSchema]]
+    # The str for `responses` are the status codes,
+    # e.g. {'200': ResponseSchema()}
+    responses: Dict[str, ResponseSchema]
+    request_body: Optional[
+        RequestBodySchema
+    ] = Field(None, alias="requestBody")
+
+
+class HttpMethodMappingSchema(Schema):
+
+    get:        Optional[HttpMethodSchema]
+    post:       Optional[HttpMethodSchema]
+    put:        Optional[HttpMethodSchema]
+    patch:      Optional[HttpMethodSchema]
+    delete:     Optional[HttpMethodSchema]
+    head:       Optional[HttpMethodSchema]
+    options:    Optional[HttpMethodSchema]
+    trace:      Optional[HttpMethodSchema]
+
+
+class PathMappingSchema(Schema):
+
+    # Map a path to an HttpMethodMappingSchema,
+    # e.g. {'/users': {'get': ..., 'post': ..., ...}}
+    paths: Dict[str, HttpMethodMappingSchema]
+
