@@ -130,9 +130,8 @@ class Reference(Component):
 class Response(OpenApiObject):
 
     status: int
-    description: Optional[str] = None
+    description: str
     content: Optional[Dict[str, Any]] = None
-    required: bool = False
 
     def as_dict(self):
         return asdict(self)
@@ -141,8 +140,8 @@ class Response(OpenApiObject):
 @dataclass
 class RequestBody(OpenApiObject):
 
-    description: Optional[str]
     content: List[Tuple[str, Type[Union[Field, Component]]]]
+    description: Optional[str] = None
     required: bool = False
 
     def as_dict(self):
