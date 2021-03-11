@@ -413,16 +413,6 @@ class PathBuilder:
             else:
                 _f = f_or_cls
 
-                # method_schema = HttpMethodSchema(
-                #     tags=tags, summary=summary, operation_id=operation_id,
-                #     description=_format_description(_f.__doc__),
-                #     # Get any type of param except for the path.
-                #     # The path param is retrieved from `path` set on the
-                #     # clients class, which won't be reached until we run
-                #     # through the class itself.
-                #     parameters=ParamBuilder.get_params_from_method(_f),
-                # )
-
                 # Parse the responses and request body from the annots
                 # and then validate them.
                 #
@@ -456,15 +446,15 @@ class PathBuilder:
                 request_schema_tp = None
                 content = {}
                 for media_type, field_type in request_body['content']:
-                    rqbody_schema_type = map_field_to_schema(
+                    field_schema_tp = map_field_to_schema(
                         field_type, is_reference=True
                     )
-                    request_schema_tp = RequestBodySchema[rqbody_schema_type]
+                    request_schema_tp = RequestBodySchema[field_schema_tp]
                     content[media_type] = {
                         'schema': create_schema(field_type, is_reference=True)
                     }
                 try:
-                    request_schema = request_schema_tp(
+                    request_body_schema = request_schema_tp(
                         description=request_body.get('description'),
                         required=request_body.get('required'),
                         content=content
@@ -472,27 +462,62 @@ class PathBuilder:
                 except ValidationError as e:
                     # TODO error handling
                     raise ValueError(f"Uh oh:\n{e.json()}") from None
-                else:
-                    print(f"{request_schema}\n\n{request_schema.dict()}")
 
-                # _validated_responses: List[Dict[str, Any]] = []
-                # for response in responses:
-                #     if not isinstance(response, Response):
-                #         try:
-                #             ResponseSchema(**response)
-                #         except ValidationError as e:
-                #             # TODO better error handling
-                #             print(e.json())
-                #             return
-                #         else:
-                #             _validated_responses.append(response)
-                #     else:
-                #         _validated_responses.append(response.dict())
+                # Response schema building.
+                response_schemas = {}
+                for response in responses:
+                    # description is not optional,
+                    # content is.
+                    if isinstance(response, Response):
+                        # Need to validate the attrs.
+                        response = response.as_dict()
 
-                # schema['requestBody'] = _validated_request_body
-                # schema['responses'] = _validated_responses
-                #
-                # setattr(_f, self.method_defn, schema)
+                    # If content is empty, then don't need to specify
+                    # generic schema type.
+                    response_schema_tp = ResponseSchema
+                    content = {}  # if not empty, will be used in schema
+                    response_content = response.get('content')
+                    if response_content is not None:
+                        for media_type, field_type in response_content:
+                            field_schema_tp = map_field_to_schema(
+                                field_type, is_reference=True
+                            )
+                            response_schema_tp = ResponseSchema[field_schema_tp]
+                            content[media_type] = {
+                                'schema': create_schema(
+                                    field_type, is_reference=True
+                                )
+                            }
+                    try:
+                        response_schema = response_schema_tp(
+                            # description is a required field.
+                            description=response['description'],
+                            content=(content or None)
+                        )
+                    except ValidationError as e:
+                        # TODO Error handling
+                        raise ValueError(f"OOOPS:\n{e.json()}")
+
+                    # status is a required field for the `Response` object
+                    # and is needed to map `HttpMethodSchema.responses`
+                    # to a `ResponseSchema`.
+                    response_schemas[response['status']] = response_schema
+
+                # Here we can build the rest of the HttpMethodSchema.
+                # TODO don't ignore external docs
+                method_schema = HttpMethodSchema(
+                    tags=tags, summary=summary, operation_id=operation_id,
+                    description=_format_description(_f.__doc__),
+                    # Get any type of param except for the path.
+                    # The path param is retrieved from `path` set on the
+                    # clients class, which won't be reached until we run
+                    # through the class itself.
+                    parameters=ParamBuilder.get_params_from_method(_f),
+                    responses=response_schemas,
+                    request_body=request_body_schema
+                )
+
+                setattr(_f, self.method_defn, method_schema)
 
             return f_or_cls
 
