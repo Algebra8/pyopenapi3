@@ -78,7 +78,7 @@ class InfoSchema(Schema):
     title: str
     version: str
     description: Optional[str]
-    terms_of_service: Optional[str] = Field(..., alias="termsOfService")
+    terms_of_service: Optional[str] = Field(None, alias="termsOfService")
     contact: Optional[ContactObject]
     license: Optional[LicenseObject]
 
@@ -152,6 +152,7 @@ class RequestBodySchema(GenericModel, Generic[FieldSchemaT], Schema):
     description: Optional[str]
     content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
     required: bool = False
+    # TODO add examples
 
 
 class ParamSchema(SchemaMapping[FieldSchemaT]):
@@ -169,12 +170,14 @@ class HttpMethodSchema(Schema):
     tags: Optional[List[str]]
     summary: Optional[str]
     description: Optional[str]
-    operation_id: Optional[str] = Field(..., alias="operationId")
+    operation_id: Optional[str] = Field(None, alias="operationId")
     parameters: Optional[List[ParamSchema]]
     # The str for `responses` are the status codes,
     # e.g. {'200': ResponseSchema()}
     responses: Dict[str, ResponseSchema]
-    request_body: Optional[RequestBodySchema] = Field(..., alias="requestBody")
+    request_body: Optional[
+        RequestBodySchema
+    ] = Field(None, alias="requestBody")
 
 
 class HttpMethodMappingSchema(Schema):
@@ -191,5 +194,7 @@ class HttpMethodMappingSchema(Schema):
 
 class PathMappingSchema(Schema):
 
+    # Map a path to an HttpMethodMappingSchema,
+    # e.g. {'/users': {'get': ..., 'post': ..., ...}}
     paths: Dict[str, HttpMethodMappingSchema]
 

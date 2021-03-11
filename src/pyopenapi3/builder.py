@@ -25,7 +25,8 @@ from .schemas import (
     ParamSchema,
     PathMappingSchema,
     HttpMethodSchema,
-    ReferenceSchema
+    SchemaMapping,
+    HttpMethodMappingSchema,
 )
 from ._yaml import make_yaml_ordered
 
@@ -391,25 +392,62 @@ class PathBuilder:
 
                 # Here we do two things:
                 #   - get the schemas from each method, e.g. `get`, `post`.
-                #   - bake in the path param, if there is one, extracted
-                #       above into each method.
+                #   - bake in the path param extracted above, if there is one.
                 schema = {path: {}}
+                http_mapping = {}
                 for name, val in _cls.__dict__.items():
-                    if (
-                            name.lower() in self._methods and
-                            hasattr(val, self.method_defn)
-                    ):
-                        method_name = name.lower()
-                        schema[method_name] = getattr(val, self.method_defn)
-                        # Here we finally append the path param.
-                        schema[method_name]['parameters'].append(path_params)
+                    if name.lower() not in self._methods:
+                        continue
+
+                    method_name = name.lower()
+                    if not hasattr(val, self.method_defn):
+                        # TODO error handling, error message
+                        raise ValueError(
+                            f'Http method {name} declared without any tags.'
+                        )
+                    method_schema: HttpMethodSchema
+                    method_schema = getattr(val, self.method_defn)
+                    if method_schema is None:
+                        # TODO error message.
+                        raise ValueError(
+                            f"HTTP method {method_name} must at least "
+                            f"contain a response"
+                        )
+                    # Don't need to validate since path param
+                    # was already validated.
+                    if method_schema.parameters is None:
+                        method_schema.parameters = path_params
+                    else:
+                        method_schema.parameters += path_params
+                    schema[path][method_name] = method_schema
+                    http_mapping[method_name] = method_schema
+
+                try:
+                    http_mapping_schema = \
+                        HttpMethodMappingSchema(**http_mapping)
+                except ValidationError as e:
+                    # TODO error handling.
+                    raise ValueError(f"nooo\n{e.json()}")
 
                 if self.builds is None:
-                    self.builds = PathMappingSchema(**{'paths': schema})
+                    try:
+                        self.builds = PathMappingSchema(
+                            paths={path: http_mapping_schema}
+                        )
+                    except ValidationError as e:
+                        # TODO error handling.
+                        raise ValueError(f"oopsy:\n{e.json()}")
                 else:
+                    # Not the first path, so `builds` can contain
+                    # other paths at this point, and we are inserting
+                    # a new one.
                     z = self.builds.dict()
-                    z['paths'].update(schema)
-                    self.builds = PathMappingSchema(**z)
+                    z['paths'][path] = http_mapping_schema
+                    try:
+                        self.builds = PathMappingSchema(**z)
+                    except ValidationError as e:
+                        # TODO Error handling.
+                        raise ValueError(f"UUHuh:\n{e.json()}")
             else:
                 _f = f_or_cls
 
@@ -439,20 +477,20 @@ class PathBuilder:
                 # TODO error handling
                 if 'content' not in request_body:
                     raise ValueError(
-                        "'content' has not been provided in the request body."
+                        "'content' has not been provided "
+                        f"in the request body for {_f.__name__}"
                     )
                 # Need to find out what kind of schema the content is,
                 # if there is one.
-                request_schema_tp = None
+                request_schema_tp = RequestBodySchema
                 content = {}
                 for media_type, field_type in request_body['content']:
                     field_schema_tp = map_field_to_schema(
                         field_type, is_reference=True
                     )
-                    request_schema_tp = RequestBodySchema[field_schema_tp]
-                    content[media_type] = {
-                        'schema': create_schema(field_type, is_reference=True)
-                    }
+                    content[media_type] = SchemaMapping[field_schema_tp](
+                        schema=create_schema(field_type, is_reference=True)
+                    )
                 try:
                     request_body_schema = request_schema_tp(
                         description=request_body.get('description'),
@@ -482,17 +520,18 @@ class PathBuilder:
                             field_schema_tp = map_field_to_schema(
                                 field_type, is_reference=True
                             )
-                            response_schema_tp = ResponseSchema[field_schema_tp]
-                            content[media_type] = {
-                                'schema': create_schema(
-                                    field_type, is_reference=True
+                            content[media_type] = \
+                                SchemaMapping[field_schema_tp](
+                                    schema=create_schema(
+                                        field_type,
+                                        is_reference=True
+                                    )
                                 )
-                            }
                     try:
                         response_schema = response_schema_tp(
                             # description is a required field.
                             description=response['description'],
-                            content=(content or None)
+                            content=(content or None),
                         )
                     except ValidationError as e:
                         # TODO Error handling
@@ -504,7 +543,6 @@ class PathBuilder:
                     response_schemas[response['status']] = response_schema
 
                 # Here we can build the rest of the HttpMethodSchema.
-                # TODO don't ignore external docs
                 method_schema = HttpMethodSchema(
                     tags=tags, summary=summary, operation_id=operation_id,
                     description=_format_description(_f.__doc__),
@@ -515,6 +553,7 @@ class PathBuilder:
                     parameters=ParamBuilder.get_params_from_method(_f),
                     responses=response_schemas,
                     request_body=request_body_schema
+                    # TODO don't ignore external docs
                 )
 
                 setattr(_f, self.method_defn, method_schema)
