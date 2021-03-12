@@ -416,8 +416,6 @@ class PathBuilder:
         self._response_schemas = None
         self._meta_info = None
 
-        # There can be multiple `paths`, so they are
-        # represented as an array.
         self.builds = None  # type: PathMappingSchema
 
     def update_params(self, e: Event):
