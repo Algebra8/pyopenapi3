@@ -253,11 +253,17 @@ class ServerBuilder:
         return {"servers": [schema.dict() for schema in self.builds]}
 
 
+class Event:
+
+    method: str
+    data: Any
+
+
 class ParamBuilder:
 
     _schema = ParamSchema
 
-    def __init__(self, __in: str, subscriber=None):
+    def __init__(self, __in: str, subscriber_callback=None):
         # What type of param is being built.
         # Can be a path, query, header, or cookie parameter.
         self.__in = __in
@@ -266,7 +272,7 @@ class ParamBuilder:
         # wrapping with __call__.
         # Otherwise, they can get the build directly through
         # `build_param`.
-        self.subscriber = subscriber
+        self.subscriber_callback = subscriber_callback
 
     def __call__(
             self, *, name: str,
@@ -285,9 +291,10 @@ class ParamBuilder:
         )
 
         def wrapper(method):
-            self.subscriber.update(
-                publisher=self, method=method.__name__, data=param
-            )
+            e = Event()
+            e.method = method.__name__
+            e.data = param
+            self.subscriber_callback(e)
             return method
 
         return wrapper
@@ -316,17 +323,17 @@ class ParamBuilder:
 
 class RequestBodyBuilder:
 
-    def __init__(self, subscriber=None):
-        self.subscriber = subscriber
+    def __init__(self, subscriber_callback=None):
+        self.subscriber_callback = subscriber_callback
 
-    def build_from_request_body(self, method, request_body):
+    def build_from_request_body(self, method_name, request_body):
         if isinstance(request_body, RequestBody):
             request_body = request_body.as_dict()
 
         if 'content' not in request_body:
             raise ValueError(
                 "'content' has not been provided "
-                f"in the request body for {method.__name__}"
+                f"in the request body for {method_name}"
             )
 
         content = build_content_schema_from_content(request_body['content'])
@@ -341,16 +348,16 @@ class RequestBodyBuilder:
             # TODO error handling
             raise ValueError(f"Uh oh:\n{e.json()}") from None
 
-        self.subscriber.update(
-            publisher=self, method=method.__name__,
-            data=request_body_schema
-        )
+        e = Event()
+        e.method = method_name
+        e.data = request_body_schema
+        self.subscriber_callback(e)
 
 
 class ResponseBuilder:
 
-    def __init__(self, subscriber=None):
-        self.subscriber = subscriber
+    def __init__(self, subscriber_callback=None):
+        self.subscriber_callback = subscriber_callback
 
     @staticmethod
     def build_from_response(response):
@@ -371,22 +378,23 @@ class ResponseBuilder:
 
         return {response['status']: response_schema}
 
-    def build_from_responses(self, method, responses):
+    def build_from_responses(self, method_name, responses):
         response_schemas_per_method = {}
         for response in responses:
             response_schemas_per_method.update(
                 self.build_from_response(response)
             )
-        self.subscriber.update(
-            publisher=self, method=method.__name__,
-            data=response_schemas_per_method
-        )
+
+        e = Event()
+        e.method = method_name
+        e.data = response_schemas_per_method
+        self.subscriber_callback(e)
 
 
 class MethodMetaDataBuilder:
 
-    def __init__(self, subscriber=None):
-        self.subscriber = subscriber
+    def __init__(self, subscriber_callback=None):
+        self.subscriber_callback = subscriber_callback
 
     def __call__(
             self, *,
@@ -403,10 +411,10 @@ class MethodMetaDataBuilder:
         }
 
         def wrapper(method):
-            self.subscriber.update(
-                publisher=self, method=method.__name__,
-                data=data
-            )
+            e = Event()
+            e.method = method.__name__
+            e.data = data
+            self.subscriber_callback(e)
             return method
         return wrapper
 
@@ -428,14 +436,18 @@ class PathBuilder:
     method_defn = '__OPENAPIDEF_METHOD__'
 
     def __init__(self):
-        self.query_param = ParamBuilder('query', self)
-        self.header_param = ParamBuilder('header', self)
-        self.cookie_param = ParamBuilder('cookie', self)
-        self.meta = MethodMetaDataBuilder(self)
+        # Client facing builders/publishers for params
+        # and http method metadata.
+        self.query_param = ParamBuilder('query', self.update_params)
+        self.header_param = ParamBuilder('header', self.update_params)
+        self.cookie_param = ParamBuilder('cookie', self.update_params)
+        self.meta = MethodMetaDataBuilder(self.update_http_meta)
 
-        self._request_body_builder = RequestBodyBuilder(self)
-        self._response_builder = ResponseBuilder(self)
+        # Builders/publishers for request body and responses.
+        self._reqbody_builder = RequestBodyBuilder(self.update_request_body)
+        self._response_builder = ResponseBuilder(self.update_responses)
 
+        # Containers for builds.
         self._method_params = None
         self._request_body_schemas = None
         self._response_schemas = None
@@ -445,28 +457,35 @@ class PathBuilder:
         # represented as an array.
         self.builds = None  # type: PathMappingSchema
 
-    def update(self, publisher, method, data):
-        if isinstance(publisher, ParamBuilder):
-            if self._method_params is None:
-                self._method_params = {}
-            if method not in self._method_params:
-                self._method_params = {method: [data]}
-            else:
-                self._method_params[method].append(data)
-        if isinstance(publisher, RequestBodyBuilder):
-            if self._request_body_schemas is None:
-                self._request_body_schemas = {}
-            # One request body per method
-            self._request_body_schemas[method] = data
-        if isinstance(publisher, ResponseBuilder):
-            if self._response_schemas is None:
-                self._response_schemas = {}
-            # Multiple responses per method
-            self._response_schemas[method] = data
-        if isinstance(publisher, MethodMetaDataBuilder):
-            if self._meta_info is None:
-                self._meta_info = {}
-            self._meta_info[method] = data
+    def update_params(self, e: Event):
+        method, data = e.method, e.data
+        if self._method_params is None:
+            self._method_params = {}
+
+        # We have several PathBuilder publishers.
+        if method in self._method_params:
+            self._method_params[method].append(data)
+        else:
+            self._method_params[method] = [data]
+
+    def update_http_meta(self, e: Event):
+        method, data = e.method, e.data
+        if self._meta_info is None:
+            self._meta_info = {}
+        self._meta_info[method] = data
+
+    def update_request_body(self, e: Event):
+        method, data = e.method, e.data
+
+        if self._request_body_schemas is None:
+            self._request_body_schemas = {}
+        self._request_body_schemas[method] = data
+
+    def update_responses(self, e: Event):
+        method, data = e.method, e.data
+        if self._response_schemas is None:
+            self._response_schemas = {}
+        self._response_schemas[method] = data
 
     def __call__(
             self, *,
@@ -532,11 +551,11 @@ class PathBuilder:
                     else:
                         request_body, responses = method_annots
 
-                    self._request_body_builder.build_from_request_body(
-                        val, request_body
+                    self._reqbody_builder.build_from_request_body(
+                        name, request_body
                     )
                     self._response_builder.build_from_responses(
-                        val, responses
+                        name, responses
                     )
 
                     meta_info = self._meta_info or {}

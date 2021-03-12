@@ -9,10 +9,9 @@ from typing import (
     cast,
     Callable,
     Dict,
+    List
 )
-import inspect
 from string import Formatter
-import functools
 
 from .objects import (
     Number,
@@ -315,7 +314,7 @@ ContentSchema = Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
 
 
 def build_content_schema_from_content(
-        content: Optional[Dict[str, Any]]) -> ContentSchema:
+        content: List[Tuple[str, Any]]) -> ContentSchema:
     if content is None:
         return
     content_schema = {}
@@ -323,10 +322,14 @@ def build_content_schema_from_content(
         field_schema_tp = map_field_to_schema(
             field_type, is_reference=True
         )
-        content_schema[media_type] = SchemaMapping[field_schema_tp](
-            schema=create_schema(field_type, is_reference=True)
+        media_type = cast(MediaType, media_type)
+        schema = cast(
+            Type[FieldSchemaT],
+            create_schema(field_type, is_reference=True)
         )
+        content_schema[media_type] = \
+            SchemaMapping[field_schema_tp](schema=schema)
 
-        return content_schema
+    return content_schema
 
 
