@@ -274,7 +274,11 @@ class RequestBodyBuilder:
     def __init__(self, subscriber_callback=None):
         self.subscriber_callback = subscriber_callback
 
-    def build_from_request_body(self, method_name, request_body):
+    def build_from_request_body(
+            self,
+            method_name: str,
+            request_body: Union[Dict[str, Any], RequestBody]
+    ) -> Optional[RequestBodySchema]:
         if isinstance(request_body, RequestBody):
             request_body = request_body.as_dict()
 
@@ -296,10 +300,13 @@ class RequestBodyBuilder:
             # TODO error handling
             raise ValueError(f"Uh oh:\n{e.json()}") from None
 
-        e = Event()
-        e.method = method_name
-        e.data = request_body_schema
-        self.subscriber_callback(e)
+        if self.subscriber_callback is not None:
+            e = Event()
+            e.method = method_name
+            e.data = request_body_schema
+            self.subscriber_callback(e)
+        else:
+            return request_body_schema
 
 
 class ResponseBuilder:
@@ -308,7 +315,9 @@ class ResponseBuilder:
         self.subscriber_callback = subscriber_callback
 
     @staticmethod
-    def build_from_response(response):
+    def build_from_response(
+            response: Union[Dict[str, Any], Response]
+    ) -> Dict[str, ResponseSchema]:
         if isinstance(response, Response):
             response = response.as_dict()
 
@@ -326,17 +335,24 @@ class ResponseBuilder:
 
         return {response['status']: response_schema}
 
-    def build_from_responses(self, method_name, responses):
+    def build_from_responses(
+            self,
+            method_name: str,
+            responses: List[Union[Dict[str, Any], Response]]
+    ) -> Optional[Dict[str, ResponseSchema]]:
         response_schemas_per_method = {}
         for response in responses:
             response_schemas_per_method.update(
                 self.build_from_response(response)
             )
 
-        e = Event()
-        e.method = method_name
-        e.data = response_schemas_per_method
-        self.subscriber_callback(e)
+        if self.subscriber_callback is not None:
+            e = Event()
+            e.method = method_name
+            e.data = response_schemas_per_method
+            self.subscriber_callback(e)
+        else:
+            return response_schemas_per_method
 
 
 class MethodMetaDataBuilder:
