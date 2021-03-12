@@ -106,58 +106,6 @@ class ComponentBuilder:
         }
 
 
-"""
-We should wind up with something like,
-
-definitions:
-    Customer:
-        ...
-    Store:
-        ...
-    ...
-
-Or
-
-components:
-    schemas:
-        Customer:
-            ...
-        Store:
-            ...
-
-
-Here, the path gets built up to a URI. 
-In the first case, we would have '#/definitions/Customer' and 
-in the second we would have '#/components/schemas/Customer'.
-
-Since the path is a variable, it should be built up or included upon
-initialization for the Builder.
-
-Builder(path='definitions')
-Or
-Builder(path='components/schemas')
-
-This seems like a good place to begin describing different types
-of builders.
-
-The paths described above are directly related to building a schema.
-
-Therefore, what is called `Builder` now should probably be changed to 
-`SchemaBuilder`.
-
-This frees conceptual resources to create other builders such as 
-
-`PathBuilder`, for api paths
-`TagBuilder`, for tags
-`ServerBuilder`, for everything related to the server, such as "HTTPS Scheme"
-`InfoObjectBuilder`
-`ComponentBuilder`
-`SecurityBuilder`
-`BuilderBuilder`, this is a poor name but should be what the client sees 
-and uses to build their template.
-"""
-
-
 class InfoObjectBuilder:
     """The Open API 3.0.0 Info Object builder.
 
