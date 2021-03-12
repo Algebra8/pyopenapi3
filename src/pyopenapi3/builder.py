@@ -257,10 +257,11 @@ class ParamBuilder:
     defn = '__OPENAPIDEF_PARAM__'
     _schema = ParamSchema
 
-    def __init__(self, __in: str):
+    def __init__(self, __in: str, subscriber=None):
         # What type of param is being built.
         # Can be a path, query, header, or cookie parameter.
         self.__in = __in
+        self.subscriber = subscriber
 
     def __call__(
             self, *, name: str,
@@ -283,10 +284,9 @@ class ParamBuilder:
         # Therefore, params are attached as a `list` on the methods
         # themselves.
         def wrapper(method):
-            if not hasattr(method, self.defn):
-                setattr(method, self.defn, [param])
-            else:
-                getattr(method, self.defn).append(param)
+            self.subscriber.update(
+                publisher=self, method=method.__name__, data=param
+            )
             return method
 
         return wrapper
@@ -335,13 +335,26 @@ class PathBuilder:
     method_defn = '__OPENAPIDEF_METHOD__'
 
     def __init__(self):
-        self.query_param = ParamBuilder('query')
-        self.header_param = ParamBuilder('header')
-        self.cookie_param = ParamBuilder('cookie')
+        self.query_param = ParamBuilder('query', self)
+        self.header_param = ParamBuilder('header', self)
+        self.cookie_param = ParamBuilder('cookie', self)
+
+        self._method_params = None
 
         # There can be multiple `paths`, so they are
         # represented as an array.
         self.builds = None  # type: PathMappingSchema
+
+    def update(self, publisher, method, data):
+        if isinstance(publisher, ParamBuilder):
+            if self._method_params is None:
+                self._method_params = {}
+            if method not in self._method_params:
+                self._method_params = {method: [data]}
+            else:
+                self._method_params[method].append(data)
+
+
 
     def __call__(
             self, *,
@@ -393,7 +406,6 @@ class PathBuilder:
                 # Here we do two things:
                 #   - get the schemas from each method, e.g. `get`, `post`.
                 #   - bake in the path param extracted above, if there is one.
-                schema = {path: {}}
                 http_mapping = {}
                 for name, val in _cls.__dict__.items():
                     if name.lower() not in self._methods:
@@ -413,13 +425,21 @@ class PathBuilder:
                             f"HTTP method {method_name} must at least "
                             f"contain a response"
                         )
+
+                    # parameters should be none here.
+                    # Can have path params and other params.
+                    method_params = path_params
+                    if self._method_params is not None:
+                        method_params += self._method_params.get(method_name, [])
                     # Don't need to validate since path param
                     # was already validated.
-                    if method_schema.parameters is None:
-                        method_schema.parameters = path_params
-                    else:
-                        method_schema.parameters += path_params
-                    schema[path][method_name] = method_schema
+                    method_schema.parameters = method_params
+                    # if method_schema.parameters is None:
+                    #     method_schema.parameters = path_params
+                    #     if self._method_params is not None:
+                    #
+                    # else:
+                    #     method_schema.parameters += path_params
                     http_mapping[method_name] = method_schema
 
                 try:
@@ -428,6 +448,8 @@ class PathBuilder:
                 except ValidationError as e:
                     # TODO error handling.
                     raise ValueError(f"nooo\n{e.json()}")
+                finally:
+                    self.flush()
 
                 if self.builds is None:
                     try:
@@ -561,6 +583,9 @@ class PathBuilder:
             return f_or_cls
 
         return wrapper
+
+    def flush(self):
+        self._method_params = None
 
 
 class OpenApiBuilder:
