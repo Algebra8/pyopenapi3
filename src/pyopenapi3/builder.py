@@ -447,9 +447,10 @@ class PathBuilder:
         self._reqbody_builder = RequestBodyBuilder(self.update_request_body)
         self._response_builder = ResponseBuilder(self.update_responses)
 
-        # Containers for builds.
+        # Containers for builds per class. Need to be `flush`ed
+        # after every class wrapping.
         self._method_params = None
-        self._request_body_schemas = None
+        self._reqbody_schemas = None
         self._response_schemas = None
         self._meta_info = None
 
@@ -477,9 +478,9 @@ class PathBuilder:
     def update_request_body(self, e: Event):
         method, data = e.method, e.data
 
-        if self._request_body_schemas is None:
-            self._request_body_schemas = {}
-        self._request_body_schemas[method] = data
+        if self._reqbody_schemas is None:
+            self._reqbody_schemas = {}
+        self._reqbody_schemas[method] = data
 
     def update_responses(self, e: Event):
         method, data = e.method, e.data
@@ -552,39 +553,34 @@ class PathBuilder:
                         request_body, responses = method_annots
 
                     self._reqbody_builder.build_from_request_body(
-                        name, request_body
+                        method_name, request_body
                     )
                     self._response_builder.build_from_responses(
-                        name, responses
+                        method_name, responses
                     )
 
                     meta_info = self._meta_info or {}
+                    if self._method_params is not None:
+                        path_params = self._method_params.get(method_name, [])
+                    path_params = path_params or None
 
-                    # Here we can build the rest of the HttpMethodSchema.
+                    # Here we can build the HttpMethodSchema...
                     try:
                         method_schema = HttpMethodSchema(
                             tags=meta_info.get('tags'),
                             summary=meta_info.get('summary'),
                             operation_id=meta_info.get('operation_id'),
                             description=_format_description(val.__doc__),
-                            # Param publishers and path param will be validated
-                            # separately and inserted during class run.
-                            parameters=None,
-                            responses=self._response_schemas[val.__name__],
-                            request_body=self._request_body_schemas[val.__name__]
+                            # Params are validated separately.
+                            parameters=path_params,
+                            responses=self._response_schemas[method_name],
+                            request_body=self._reqbody_schemas[method_name]
                             # TODO don't ignore external docs
                         )
                     except ValidationError as e:
                         raise ValueError(f"oops:\n{e.json()}")
 
-                    # parameters should be none here.
-                    # Can have path params and other params.
-                    method_params = path_params
-                    if self._method_params is not None:
-                        method_params += self._method_params.get(method_name, [])
-                    # Don't need to validate since path param
-                    # was already validated.
-                    method_schema.parameters = method_params
+                    # ..., and map it to the method.
                     http_mapping[method_name] = method_schema
 
                 try:
@@ -622,7 +618,7 @@ class PathBuilder:
 
     def flush(self):
         self._method_params = None
-        self._request_body_schemas = None
+        self._reqbody_schemas = None
         self._response_schemas = None
         self._meta_info = None
 
