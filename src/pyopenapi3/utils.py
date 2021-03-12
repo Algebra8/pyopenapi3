@@ -1,7 +1,17 @@
-from typing import Optional, Any, Union, Type, Tuple, cast, Callable, Dict
-import inspect
+from __future__ import annotations
+
+from typing import (
+    Optional,
+    Any,
+    Union,
+    Type,
+    Tuple,
+    cast,
+    Callable,
+    Dict,
+    List
+)
 from string import Formatter
-import functools
 
 from .objects import (
     Number,
@@ -22,7 +32,9 @@ from .schemas import (
     ReferenceSchema,
     PrimitiveSchema,
     Schema,
-    FieldSchemaT
+    FieldSchemaT,
+    SchemaMapping,
+    MediaType
 )
 
 
@@ -296,3 +308,28 @@ def map_field_to_schema(
         raise ValueError(
             "Must provide a `Field` or custom component."
         )
+
+
+ContentSchema = Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
+
+
+def build_content_schema_from_content(
+        content: List[Tuple[str, Any]]) -> ContentSchema:
+    if content is None:
+        return
+    content_schema = {}
+    for media_type, field_type in content:
+        field_schema_tp = map_field_to_schema(
+            field_type, is_reference=True
+        )
+        media_type = cast(MediaType, media_type)
+        schema = cast(
+            Type[FieldSchemaT],
+            create_schema(field_type, is_reference=True)
+        )
+        content_schema[media_type] = \
+            SchemaMapping[field_schema_tp](schema=schema)
+
+    return content_schema
+
+

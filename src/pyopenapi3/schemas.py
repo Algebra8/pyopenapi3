@@ -129,7 +129,7 @@ class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
     schema_field: SchemaT = Field(..., alias='schema')
 
 
-class ResponseSchema(GenericModel, Generic[FieldSchemaT], Schema):
+class ResponseSchema(Schema):
     """Serialized Response Object.
     """
 
@@ -138,10 +138,15 @@ class ResponseSchema(GenericModel, Generic[FieldSchemaT], Schema):
         arbitrary_types_allowed = True
 
     description: str
-    content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
+    # Needs to be Any: there can be variable number of
+    # FieldSchemaT types, but we don't have variadic generics.
+    # So, we use FieldSchemaT to validate the content's schema,
+    # and use Any here to prevent Pydantic from arbitrarily
+    # picking a schema belonging to some constraint in FieldSchemaT.
+    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
 
 
-class RequestBodySchema(GenericModel, Generic[FieldSchemaT], Schema):
+class RequestBodySchema(Schema):
     """Serialized Request Body Object.
     """
 
@@ -150,7 +155,8 @@ class RequestBodySchema(GenericModel, Generic[FieldSchemaT], Schema):
         arbitrary_types_allowed = True
 
     description: Optional[str]
-    content: Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
+    # See ResponseSchema.content above for why we use Any.
+    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
     required: bool = False
     # TODO add examples
 
