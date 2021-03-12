@@ -397,8 +397,6 @@ class PathBuilder:
         'trace'
     }
 
-    method_defn = '__OPENAPIDEF_METHOD__'
-
     def __init__(self):
         # Client facing builders/publishers for params
         # and http method metadata.
