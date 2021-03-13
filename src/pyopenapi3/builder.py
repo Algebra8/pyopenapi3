@@ -507,7 +507,8 @@ class PathBuilder:
                 method_name, responses
             )
 
-            meta_info = self._meta_info or {}
+            # Get method's meta info and params.
+            meta_info = (self._meta_info or {}).get(method_name, {})
             if self._method_params is not None:
                 path_params = self._method_params.get(method_name, [])
             path_params = path_params or None
