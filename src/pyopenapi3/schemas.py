@@ -71,7 +71,9 @@ class ContactObject(Schema):
 
 
 class LicenseObject(Schema):
-    ...
+
+    name: str
+    url: Optional[AnyUrl]
 
 
 class InfoSchema(Schema):
