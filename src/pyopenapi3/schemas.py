@@ -63,7 +63,7 @@ FieldSchema = Union[
 
 
 # Info metadata schemas.
-class ContactObject(Schema):
+class ContactSchema(Schema):
 
     # The identifying name of the contact person/organization.
     name: Optional[str]
@@ -79,7 +79,7 @@ class ContactObject(Schema):
         return d
 
 
-class LicenseObject(Schema):
+class LicenseSchema(Schema):
 
     # The license name used for the API.
     name: str
@@ -106,9 +106,9 @@ class InfoSchema(Schema):
     # A URL to the Terms of Service for the API.
     terms_of_service: Optional[AnyUrl] = Field(None, alias="termsOfService")
     # The contact information for the exposed API.
-    contact: Optional[ContactObject]
+    contact: Optional[ContactSchema]
     # The license information for the exposed API.
-    license: Optional[LicenseObject]
+    license: Optional[LicenseSchema]
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
