@@ -569,6 +569,9 @@ class PathBuilder:
         self._response_schemas = None
         self._meta_info = None
 
+    def as_dict(self):
+        return self.builds.dict()
+
 
 class OpenApiBuilder:
     """Super builder for Open API 3.0.0 document.
@@ -580,11 +583,13 @@ class OpenApiBuilder:
     component = ComponentBuilder
     info = InfoObjectBuilder
 
-    def __init__(self):
+    def __init__(self, version: str = '3.0.0'):
         self.component = ComponentBuilder()
         self.info = InfoObjectBuilder()
         self.server = ServerBuilder()
         self.path = PathBuilder()
+
+        self.version = {'openapi': version}
 
         self.builds = {}
 
@@ -592,9 +597,12 @@ class OpenApiBuilder:
         info = self.info.as_dict()
         servers = self.server.as_dict()
         comp = self.component.as_dict()
+        paths = self.path.as_dict()
         self.builds = OrderedDict([
+            ("openapi", self.version["openapi"]),
             ("info", info["info"]),
             ("servers", servers["servers"]),
+            ("paths", paths['paths']),
             ("components", comp["components"])
         ])
         return self.builds
