@@ -279,6 +279,9 @@ class RequestBodyBuilder:
             method_name: str,
             request_body: Union[Dict[str, Any], RequestBody]
     ) -> Optional[RequestBodySchema]:
+        if request_body is Ellipsis:
+            return
+
         if method_name == 'get':
             raise ValueError("GET operations cannot have a request body.")
 
@@ -515,6 +518,7 @@ class PathBuilder:
             if self._method_params is not None:
                 path_params = self._method_params.get(method_name, [])
             path_params = path_params or None
+            reqbody_schema = (self._reqbody_schemas or {}).get(method_name)
 
             # Here we can build the HttpMethodSchema...
             try:
@@ -526,7 +530,7 @@ class PathBuilder:
                     # Params are validated separately.
                     parameters=path_params,
                     responses=self._response_schemas[method_name],
-                    request_body=self._reqbody_schemas[method_name]
+                    request_body=reqbody_schema
                     # TODO don't ignore external docs
                 )
             except ValidationError as e:
