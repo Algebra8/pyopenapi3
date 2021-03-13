@@ -491,15 +491,22 @@ class PathBuilder:
 
         # Here we do two things:
         #   - get the schemas from each method, e.g. `get`, `post`.
-        #   - bake in the path param extracted above, if there is one.
+        #   - bake in the path params extracted above, if there are any.
+        http_methods = {
+            func_name.lower(): func for func_name, func in cls.__dict__.items()
+            if func_name.lower() in self._methods
+        }
+        if not http_methods:
+            raise ValueError(
+                "A path must have at least one HTTP "
+                "operation, e.g. `get`, `post`, etc."
+            )
         http_mapping = {}
-        for name, val in cls.__dict__.items():
-            if name.lower() not in self._methods:
-                continue
-
-            method_name = name.lower()
-            # Get responses and requests
-            method_annots = val.__annotations__['return']
+        for method_name, method in http_methods.items():
+            # Get a methods responses and requests: unlike the meta info
+            # and params, responses and requests are parsed and built
+            # from the class's methods directly.
+            method_annots = method.__annotations__['return']
             if hasattr(method_annots, '_name'):
                 # typing.Tuple
                 request_body, responses = method_annots.__args__
@@ -535,7 +542,7 @@ class PathBuilder:
                     tags=meta_info.get('tags'),
                     summary=meta_info.get('summary'),
                     operation_id=meta_info.get('operation_id'),
-                    description=_format_description(val.__doc__),
+                    description=_format_description(method.__doc__),
                     # Params are validated separately.
                     parameters=(params_for_method or None),
                     responses=responses_for_method,
@@ -555,6 +562,9 @@ class PathBuilder:
             # TODO error handling.
             raise ValueError(f"nooo\n{e.json()}")
         finally:
+            # TODO Maybe the client is ok with handling one of the paths
+            #  breaking and this should stay in a finally block? Or does
+            #  this send mixed signals?
             self.flush()
 
         if self.builds is None:
