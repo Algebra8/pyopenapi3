@@ -513,12 +513,21 @@ class PathBuilder:
                 method_name, responses
             )
 
-            # Get method's meta info and params.
+            # Get schemas for this method.
             meta_info = (self._meta_info or {}).get(method_name, {})
+
+            params_for_method = []
             if self._method_params is not None:
-                path_params = self._method_params.get(method_name, [])
-            path_params = path_params or None
-            reqbody_schema = (self._reqbody_schemas or {}).get(method_name)
+                params_for_method += self._method_params.get(method_name, [])
+            params_for_method += path_params
+
+            reqbody_for_method = (self._reqbody_schemas or {}).get(method_name)
+
+            responses_for_method = self._response_schemas.get(method_name)
+            if responses_for_method is None:
+                raise ValueError(
+                    "Must include at least one response per method."
+                )
 
             # Here we can build the HttpMethodSchema...
             try:
@@ -528,9 +537,9 @@ class PathBuilder:
                     operation_id=meta_info.get('operation_id'),
                     description=_format_description(val.__doc__),
                     # Params are validated separately.
-                    parameters=path_params,
-                    responses=self._response_schemas[method_name],
-                    request_body=reqbody_schema
+                    parameters=(params_for_method or None),
+                    responses=responses_for_method,
+                    request_body=reqbody_for_method
                     # TODO don't ignore external docs
                 )
             except ValidationError as e:
