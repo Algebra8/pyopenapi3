@@ -72,6 +72,12 @@ class ContactObject(Schema):
     # The email address of the contact person/organization.
     email: Optional[EmailStr]
 
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'url' in d:
+            d['url'] = str(d['url'])
+        return d
+
 
 class LicenseObject(Schema):
 
@@ -79,6 +85,12 @@ class LicenseObject(Schema):
     name: str
     # A URL to the license used for the API.
     url: Optional[AnyUrl]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'url' in d:
+            d['url'] = str(d['url'])
+        return d
 
 
 class InfoSchema(Schema):
@@ -97,6 +109,12 @@ class InfoSchema(Schema):
     contact: Optional[ContactObject]
     # The license information for the exposed API.
     license: Optional[LicenseObject]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'termsOfService' in d:
+            d['termsOfService'] = str(d['termsOfService'])
+        return d
 
 
 # Server schemas
