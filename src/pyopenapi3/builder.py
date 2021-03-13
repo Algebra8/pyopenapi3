@@ -534,19 +534,13 @@ class PathBuilder:
                     paths={path: http_mapping_schema}
                 )
             except ValidationError as e:
-                # TODO error handling.
-                raise ValueError(f"oopsy:\n{e.json()}")
+                # TODO Error handling
+                raise ValueError(f"oops: {e.json()}")
         else:
             # Not the first path, so `builds` can contain
-            # other paths at this point, and we are inserting
+            # other paths at this point and we are inserting
             # a new one.
-            z = self.builds.dict()
-            z['paths'][path] = http_mapping_schema
-            try:
-                self.builds = PathMappingSchema(**z)
-            except ValidationError as e:
-                # TODO Error handling.
-                raise ValueError(f"UUHuh:\n{e.json()}")
+            self.builds.paths[path] = http_mapping_schema
 
         return cls
 
