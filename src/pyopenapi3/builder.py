@@ -279,6 +279,9 @@ class RequestBodyBuilder:
             method_name: str,
             request_body: Union[Dict[str, Any], RequestBody]
     ) -> Optional[RequestBodySchema]:
+        if method_name == 'get':
+            raise ValueError("GET operations cannot have a request body.")
+
         if isinstance(request_body, RequestBody):
             request_body = request_body.as_dict()
 
