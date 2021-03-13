@@ -448,14 +448,7 @@ class PathBuilder:
             self._response_schemas = {}
         self._response_schemas[method] = data
 
-    def __call__(
-            self, *,
-            tags: Optional[List[str]] = None,
-            summary: Optional[str] = None,
-            operation_id: Optional[str] = None,
-            # TODO external docs
-            external_docs: Any = None
-    ):
+    def __call__(self, cls):
         # Get path and any formatted path params.
         #   - Create the parameter using the schema provided.
         # Go through each method and weed out the HTTP methods,
@@ -466,115 +459,108 @@ class PathBuilder:
         #   - Build the responses
         #   - Build the query params
 
-        # iterate over methods
-        def wrapper(f_or_cls):
-            if inspect.isclass(f_or_cls):
-                _cls = f_or_cls
+        # Build the `path` param, e.g. `path = '/users/{id:Int64}'`,
+        # then each method should include an "in: path" param with
+        # the type schema provided in the formatted string.
 
-                # Build the `path` param, e.g. `path = '/users/{id:Int64}'`,
-                # then each method should include an "in: path" param with
-                # the type schema provided in the formatted string.
+        # Here we extract any formatted string parameters.
+        # Note there could be multiple for a single `path`.
+        path = cls.path
+        path_params = []
+        for name, _type in parse_name_and_type_from_fmt_str(path):
+            path_param = ParamBuilder('path').build_param(
+                name=name,
+                field=_type,
+                required=True
+            )
+            path_params.append(path_param)
 
-                # Here we extract any formatted string parameters.
-                # Note there could be multiple for a single `path`.
-                path = _cls.path
-                path_params = []
-                for name, _type in parse_name_and_type_from_fmt_str(path):
-                    path_param = ParamBuilder('path').build_param(
-                        name=name,
-                        field=_type,
-                        required=True
-                    )
-                    path_params.append(path_param)
+        if path_params:
+            # Open API doesn't want "{name:type}", just "{name}".
+            path = re.sub(
+                "{([^}]*)}",
+                lambda mo: "{" + mo.group(1).split(':')[0] + "}",
+                cls.path
+            )
 
-                if path_params:
-                    # Open API doesn't want "{name:type}", just "{name}".
-                    path = re.sub(
-                        "{([^}]*)}",
-                        lambda mo: "{" + mo.group(1).split(':')[0] + "}",
-                        _cls.path
-                    )
+        # Here we do two things:
+        #   - get the schemas from each method, e.g. `get`, `post`.
+        #   - bake in the path param extracted above, if there is one.
+        http_mapping = {}
+        for name, val in cls.__dict__.items():
+            if name.lower() not in self._methods:
+                continue
 
-                # Here we do two things:
-                #   - get the schemas from each method, e.g. `get`, `post`.
-                #   - bake in the path param extracted above, if there is one.
-                http_mapping = {}
-                for name, val in _cls.__dict__.items():
-                    if name.lower() not in self._methods:
-                        continue
+            method_name = name.lower()
+            # Get responses and requests
+            method_annots = val.__annotations__['return']
+            if hasattr(method_annots, '_name'):
+                # typing.Tuple
+                request_body, responses = method_annots.__args__
+            else:
+                request_body, responses = method_annots
 
-                    method_name = name.lower()
-                    # Get responses and requests
-                    method_annots = val.__annotations__['return']
-                    if hasattr(method_annots, '_name'):
-                        # typing.Tuple
-                        request_body, responses = method_annots.__args__
-                    else:
-                        request_body, responses = method_annots
+            self._reqbody_builder.build_from_request_body(
+                method_name, request_body
+            )
+            self._response_builder.build_from_responses(
+                method_name, responses
+            )
 
-                    self._reqbody_builder.build_from_request_body(
-                        method_name, request_body
-                    )
-                    self._response_builder.build_from_responses(
-                        method_name, responses
-                    )
+            meta_info = self._meta_info or {}
+            if self._method_params is not None:
+                path_params = self._method_params.get(method_name, [])
+            path_params = path_params or None
 
-                    meta_info = self._meta_info or {}
-                    if self._method_params is not None:
-                        path_params = self._method_params.get(method_name, [])
-                    path_params = path_params or None
+            # Here we can build the HttpMethodSchema...
+            try:
+                method_schema = HttpMethodSchema(
+                    tags=meta_info.get('tags'),
+                    summary=meta_info.get('summary'),
+                    operation_id=meta_info.get('operation_id'),
+                    description=_format_description(val.__doc__),
+                    # Params are validated separately.
+                    parameters=path_params,
+                    responses=self._response_schemas[method_name],
+                    request_body=self._reqbody_schemas[method_name]
+                    # TODO don't ignore external docs
+                )
+            except ValidationError as e:
+                raise ValueError(f"oops:\n{e.json()}")
 
-                    # Here we can build the HttpMethodSchema...
-                    try:
-                        method_schema = HttpMethodSchema(
-                            tags=meta_info.get('tags'),
-                            summary=meta_info.get('summary'),
-                            operation_id=meta_info.get('operation_id'),
-                            description=_format_description(val.__doc__),
-                            # Params are validated separately.
-                            parameters=path_params,
-                            responses=self._response_schemas[method_name],
-                            request_body=self._reqbody_schemas[method_name]
-                            # TODO don't ignore external docs
-                        )
-                    except ValidationError as e:
-                        raise ValueError(f"oops:\n{e.json()}")
+            # ..., and map it to the method.
+            http_mapping[method_name] = method_schema
 
-                    # ..., and map it to the method.
-                    http_mapping[method_name] = method_schema
+        try:
+            http_mapping_schema = \
+                HttpMethodMappingSchema(**http_mapping)
+        except ValidationError as e:
+            # TODO error handling.
+            raise ValueError(f"nooo\n{e.json()}")
+        finally:
+            self.flush()
 
-                try:
-                    http_mapping_schema = \
-                        HttpMethodMappingSchema(**http_mapping)
-                except ValidationError as e:
-                    # TODO error handling.
-                    raise ValueError(f"nooo\n{e.json()}")
-                finally:
-                    self.flush()
+        if self.builds is None:
+            try:
+                self.builds = PathMappingSchema(
+                    paths={path: http_mapping_schema}
+                )
+            except ValidationError as e:
+                # TODO error handling.
+                raise ValueError(f"oopsy:\n{e.json()}")
+        else:
+            # Not the first path, so `builds` can contain
+            # other paths at this point, and we are inserting
+            # a new one.
+            z = self.builds.dict()
+            z['paths'][path] = http_mapping_schema
+            try:
+                self.builds = PathMappingSchema(**z)
+            except ValidationError as e:
+                # TODO Error handling.
+                raise ValueError(f"UUHuh:\n{e.json()}")
 
-                if self.builds is None:
-                    try:
-                        self.builds = PathMappingSchema(
-                            paths={path: http_mapping_schema}
-                        )
-                    except ValidationError as e:
-                        # TODO error handling.
-                        raise ValueError(f"oopsy:\n{e.json()}")
-                else:
-                    # Not the first path, so `builds` can contain
-                    # other paths at this point, and we are inserting
-                    # a new one.
-                    z = self.builds.dict()
-                    z['paths'][path] = http_mapping_schema
-                    try:
-                        self.builds = PathMappingSchema(**z)
-                    except ValidationError as e:
-                        # TODO Error handling.
-                        raise ValueError(f"UUHuh:\n{e.json()}")
-
-            return f_or_cls
-
-        return wrapper
+        return cls
 
     def flush(self):
         self._method_params = None
