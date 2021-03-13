@@ -11,7 +11,7 @@ pyopenpath = os.path.abspath(
 )
 sys.path.insert(0, pyopenpath)
 
-from pyopenapi3.builder import InfoBuilder
+from pyopenapi3.builder import InfoBuilder, ServerBuilder
 from .examples.info import info_object_example
 
 
@@ -35,3 +35,7 @@ def test_info_object_success():
         }
 
     assert info_bldr.builds.dict() == info_object_example
+
+
+def test_server_object_success():
+    ...
