@@ -1,0 +1,112 @@
+openapi: 3.0.0
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://www.example.com/support
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://example.com/terms/
+  title: A customer based store
+  version: 1.0.0
+servers:
+- description: Server 1
+  url: path/to/server1
+- description: Server 2
+  url: path/to/server2
+  variables:
+    customerId:
+      default: demo
+      description: Customer ID assigned by service provider.
+    port:
+      default: '443'
+      enum:
+      - '443'
+      - '8443'
+paths:
+  /user:
+    get:
+      responses:
+        '200':
+          description: The response
+  /users/{id}:
+    get:
+      description: Get all users
+      parameters:
+      - in: query
+        name: ar
+        required: false
+        schema:
+          format: int64
+          type: integer
+      - in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+          description: a list of users
+        '404':
+          description: an error
+      summary: summary1
+      tags:
+      - tag1
+    post:
+      description: post to all users
+      parameters:
+      - in: query
+        name: ar
+        required: false
+        schema:
+          format: int64
+          type: integer
+      - in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+          application/xml:
+            schema:
+              format: int64
+              type: integer
+        description: Some request body
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+          description: a list of users
+        '404':
+          description: an error
+      summary: summary1
+      tags:
+      - tag1
+components:
+  schemas:
+    Customer:
+      description: A customer
+      properties:
+        email:
+          description: An email
+          format: email
+          type: string
+        id:
+          description: An id
+          format: int64
+          type: integer
+      type: object

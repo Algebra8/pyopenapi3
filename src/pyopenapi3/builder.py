@@ -106,7 +106,7 @@ class ComponentBuilder:
         }
 
 
-class InfoObjectBuilder:
+class InfoBuilder:
     """The Open API 3.0.0 Info Object builder.
 
     Provides metadata about the API.
@@ -609,11 +609,11 @@ class OpenApiBuilder:
     accessed by the client to build those parts.
     """
     component = ComponentBuilder
-    info = InfoObjectBuilder
+    info = InfoBuilder
 
     def __init__(self, version: str = '3.0.0'):
         self.component = ComponentBuilder()
-        self.info = InfoObjectBuilder()
+        self.info = InfoBuilder()
         self.server = ServerBuilder()
         self.path = PathBuilder()
 
