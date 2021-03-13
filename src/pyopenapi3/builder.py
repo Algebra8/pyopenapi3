@@ -492,12 +492,17 @@ class PathBuilder:
         # Here we do two things:
         #   - get the schemas from each method, e.g. `get`, `post`.
         #   - bake in the path params extracted above, if there are any.
-        http_method_methods = {
+        http_methods = {
             func_name.lower(): func for func_name, func in cls.__dict__.items()
             if func_name.lower() in self._methods
         }
+        if not http_methods:
+            raise ValueError(
+                "A path must have at least one HTTP "
+                "operation, e.g. `get`, `post`, etc."
+            )
         http_mapping = {}
-        for method_name, method in http_method_methods:
+        for method_name, method in http_methods.items():
             # Get a methods responses and requests: unlike the meta info
             # and params, responses and requests are parsed and built
             # from the class's methods directly.
