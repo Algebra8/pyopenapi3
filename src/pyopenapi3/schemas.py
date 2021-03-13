@@ -1,6 +1,6 @@
-from typing import Optional, Dict, List, Tuple, Any, Union, Generic, TypeVar
+from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AnyUrl
 from pydantic.generics import GenericModel
 
 
@@ -78,7 +78,7 @@ class InfoSchema(Schema):
     title: str
     version: str
     description: Optional[str]
-    terms_of_service: Optional[str] = Field(None, alias="termsOfService")
+    terms_of_service: Optional[AnyUrl] = Field(None, alias="termsOfService")
     contact: Optional[ContactObject]
     license: Optional[LicenseObject]
 
