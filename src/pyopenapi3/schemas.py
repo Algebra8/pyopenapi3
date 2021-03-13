@@ -120,8 +120,13 @@ class InfoSchema(Schema):
 # Server schemas
 class ServerVariableSchema(Schema):
 
-    enum: Optional[List[str]]
+    # The default value to use for substitution, which SHALL
+    # be sent if an alternate value is not supplied.
     default: str
+    # An enumeration of string values to be used if the
+    # substitution options are from a limited set.
+    enum: Optional[List[str]]
+    # An optional description for the server variable.
     description: Optional[str]
 
 
@@ -129,10 +134,18 @@ class ServerSchema(Schema):
     """Serialized Server Object.
     """
 
-    url: str
+    # A URL to the target host.
+    url: Optional[AnyUrl]
+    # An optional string describing the host designated by the URL.
     description: Optional[str]
-    # Not sure if Pydantic can handle typing.Mapping
+    # A map between a variable name and its value.
     variables: Optional[Dict[str, ServerVariableSchema]]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'url' in d:
+            d['url'] = str(d['url'])
+        return d
 
 
 # Path schemas
