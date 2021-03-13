@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 
-from pydantic import BaseModel, Field, AnyUrl
+from pydantic import BaseModel, Field, AnyUrl, EmailStr
 from pydantic.generics import GenericModel
 
 
@@ -64,23 +64,57 @@ FieldSchema = Union[
 
 # Info metadata schemas.
 class ContactObject(Schema):
-    ...
+
+    # The identifying name of the contact person/organization.
+    name: Optional[str]
+    # The URL pointing to the contact information.
+    url: Optional[AnyUrl]
+    # The email address of the contact person/organization.
+    email: Optional[EmailStr]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'url' in d:
+            d['url'] = str(d['url'])
+        return d
 
 
 class LicenseObject(Schema):
-    ...
+
+    # The license name used for the API.
+    name: str
+    # A URL to the license used for the API.
+    url: Optional[AnyUrl]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'url' in d:
+            d['url'] = str(d['url'])
+        return d
 
 
 class InfoSchema(Schema):
     """Serialized Info Object.
     """
 
+    # The title of the API.
     title: str
+    # The version of the OpenAPI document.
     version: str
+    # A short description of the API.
     description: Optional[str]
+    # A URL to the Terms of Service for the API.
     terms_of_service: Optional[AnyUrl] = Field(None, alias="termsOfService")
+    # The contact information for the exposed API.
     contact: Optional[ContactObject]
+    # The license information for the exposed API.
     license: Optional[LicenseObject]
+
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        if 'termsOfService' in d:
+            d['termsOfService'] = str(d['termsOfService'])
+        return d
 
 
 # Server schemas
