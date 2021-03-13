@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List, Union, Type
+from typing import Dict, Any, Optional, List, Union, Type, Callable
 import yaml
 import inspect
 from collections import OrderedDict
@@ -455,32 +455,8 @@ class PathBuilder:
         self._response_schemas[method] = data
 
     def __call__(self, cls):
-        # Get path and any formatted path params.
-        #   - Create the parameter using the schema provided.
-        # Go through each method and weed out the HTTP methods,
-        # such as `get`, `post`, etc.
-        #   - Get requestBody and Responses from return annotations
-        #   - Get query params from method params annotations
-        #   - Build the request body
-        #   - Build the responses
-        #   - Build the query params
-
-        # Build the `path` param, e.g. `path = '/users/{id:Int64}'`,
-        # then each method should include an "in: path" param with
-        # the type schema provided in the formatted string.
-
-        # Here we extract any formatted string parameters.
-        # Note there could be multiple for a single `path`.
         path = cls.path
-        path_params = []
-        for name, _type in parse_name_and_type_from_fmt_str(path):
-            path_param = ParamBuilder('path').build_param(
-                name=name,
-                field=_type,
-                required=True
-            )
-            path_params.append(path_param)
-
+        path_params = self._build_path_params(path)
         if path_params:
             # Open API doesn't want "{name:type}", just "{name}".
             path = re.sub(
@@ -503,22 +479,7 @@ class PathBuilder:
             )
         http_mapping = {}
         for method_name, method in http_methods.items():
-            # Get a methods responses and requests: unlike the meta info
-            # and params, responses and requests are parsed and built
-            # from the class's methods directly.
-            method_annots = method.__annotations__['return']
-            if hasattr(method_annots, '_name'):
-                # typing.Tuple
-                request_body, responses = method_annots.__args__
-            else:
-                request_body, responses = method_annots
-
-            self._reqbody_builder.build_from_request_body(
-                method_name, request_body
-            )
-            self._response_builder.build_from_responses(
-                method_name, responses
-            )
+            self._parse_and_build_responses_and_request_body(method)
 
             # Get schemas for this method.
             meta_info = (self._meta_info or {}).get(method_name, {})
@@ -597,6 +558,53 @@ class PathBuilder:
 
     def as_dict(self):
         return self.builds.dict()
+
+    @staticmethod
+    def _build_path_params(fmt_str_path: str) -> List[Optional[ParamSchema]]:
+        """Build the `path` parameter for the Path.
+
+        E.g., if `path = '/users/{id:Int64}'`, then each method should
+        include an "in: path" param with the type schema provided in the
+        formatted string `fmt_str_path`.
+        """
+        path_params = []
+        for name, _type in parse_name_and_type_from_fmt_str(fmt_str_path):
+            path_param = ParamBuilder('path').build_param(
+                name=name,
+                field=_type,
+                required=True
+            )
+            path_params.append(path_param)
+        return path_params
+
+    def _parse_and_build_responses_and_request_body(
+            self, method: Callable
+    ) -> None:
+        """Get a method's responses and requests.
+
+        Unlike the meta info and params, responses and requests
+        are parsed and built from the class's methods directly.
+        """
+        method_annots = method.__annotations__.get('return')
+        if method_annots is None:
+            # TODO error message
+            raise ValueError(
+                "Request body and responses need to be included "
+                "in the method's `return` annotations. "
+                "E.g. def get() -> (RequestBody, [Response])"
+            )
+        if hasattr(method_annots, '_name'):
+            # typing.Tuple
+            request_body, responses = method_annots.__args__
+        else:
+            request_body, responses = method_annots
+
+        self._reqbody_builder.build_from_request_body(
+            method.__name__, request_body
+        )
+        self._response_builder.build_from_responses(
+            method.__name__, responses
+        )
 
 
 class OpenApiBuilder:
