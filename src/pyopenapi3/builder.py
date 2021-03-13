@@ -492,14 +492,14 @@ class PathBuilder:
         # Here we do two things:
         #   - get the schemas from each method, e.g. `get`, `post`.
         #   - bake in the path param extracted above, if there is one.
+        http_method_methods = {
+            func_name.lower(): func for func_name, func in cls.__dict__.items()
+            if func_name.lower() in self._methods
+        }
         http_mapping = {}
-        for name, val in cls.__dict__.items():
-            if name.lower() not in self._methods:
-                continue
-
-            method_name = name.lower()
+        for method_name, method in http_method_methods:
             # Get responses and requests
-            method_annots = val.__annotations__['return']
+            method_annots = method.__annotations__['return']
             if hasattr(method_annots, '_name'):
                 # typing.Tuple
                 request_body, responses = method_annots.__args__
@@ -535,7 +535,7 @@ class PathBuilder:
                     tags=meta_info.get('tags'),
                     summary=meta_info.get('summary'),
                     operation_id=meta_info.get('operation_id'),
-                    description=_format_description(val.__doc__),
+                    description=_format_description(method.__doc__),
                     # Params are validated separately.
                     parameters=(params_for_method or None),
                     responses=responses_for_method,
