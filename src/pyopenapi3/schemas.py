@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 
-from pydantic import BaseModel, Field, AnyUrl
+from pydantic import BaseModel, Field, AnyUrl, EmailStr
 from pydantic.generics import GenericModel
 
 
@@ -64,7 +64,10 @@ FieldSchema = Union[
 
 # Info metadata schemas.
 class ContactObject(Schema):
-    ...
+
+    name: Optional[str]
+    url: Optional[AnyUrl]
+    email: Optional[EmailStr]
 
 
 class LicenseObject(Schema):
