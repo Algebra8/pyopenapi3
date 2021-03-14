@@ -23,7 +23,7 @@ from .schemas import (
     ServerSchema,
     ResponseSchema,
     RequestBodySchema,
-    ParamSchema,
+    ParameterObject,
     PathObject,
     OperationObject,
     SchemaMapping,
@@ -203,7 +203,7 @@ class Event:
 
 class ParamBuilder:
 
-    _schema = ParamSchema
+    _schema = ParameterObject
 
     def __init__(self, __in: str, subscriber_callback=None):
         # What type of param is being built.
@@ -247,7 +247,7 @@ class ParamBuilder:
             required: bool = False,
             allow_reserved: bool = False,
             description: Optional[str] = None
-    ) -> ParamSchema:
+    ) -> ParameterObject:
         try:
             param = self._schema(
                 name=name, in_field=self.__in,
@@ -548,7 +548,8 @@ class PathBuilder:
         return self.builds.dict()
 
     @staticmethod
-    def _build_path_params(fmt_str_path: str) -> List[Optional[ParamSchema]]:
+    def _build_path_params(
+            fmt_str_path: str) -> List[Optional[ParameterObject]]:
         """Build the `path` parameter for the Path.
 
         E.g., if `path = '/users/{id:Int64}'`, then each method should

@@ -1,5 +1,6 @@
 from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 from string import Formatter
+from enum import Enum
 
 from pydantic import (
     BaseModel,
@@ -245,15 +246,46 @@ class RequestBodySchema(Schema):
     required: bool = False
     # TODO add examples
 
-# TODO ParameterObject
-class ParamSchema(SchemaMapping[FieldSchemaT]):
 
+class ParamLocation(str, Enum):
+
+    PATH = 'path'
+    QUERY = 'query'
+    HEADER = 'header'
+    COOKIE = 'cookie'
+
+
+class ParameterObject(SchemaMapping[FieldSchemaT]):
+    """Schema for a Parameter Object.
+
+    Describes a single operation parameter, as described in
+    https://swagger.io/specification/#parameter-object.
+
+    A unique parameter is defined by a combination of a name and location.
+    """
+
+    class Config:
+
+        use_enum_values = True
+
+    # The name of the parameter.
     name: str
-    # alias will be returned by default.
-    # See `SchemaMapping`.
-    in_field: str = Field(..., alias='in')
+
+    # The location of the parameter.
+    in_field: ParamLocation = Field(..., alias='in')
+
+    # A brief description of the parameter.
     description: Optional[str]
-    required: bool = False
+
+    # Determines whether this parameter is mandatory.
+    required: Optional[bool]
+
+    # Specifies that a parameter is deprecated and SHOULD
+    # be transitioned out of usage.
+    deprecated: Optional[bool]
+
+    # Sets the ability to pass empty-valued parameters.
+    allow_empty_value: Optional[bool] = Field(None, alias='allowEmptyValue')
 
 
 # TODO ExternalDocObject
@@ -296,7 +328,7 @@ class OperationObject(Schema):
     operation_id: Optional[str] = Field(None, alias="operationId")
 
     # A list of parameters that are applicable for this operation.
-    parameters: Optional[List[Union[ParamSchema, ReferenceSchema]]]
+    parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
 
     # The list of possible responses as they are returned from
     # executing this operation.
@@ -375,7 +407,7 @@ class PathItemObject(Schema):
 
     # A list of parameters that are applicable for all the
     # operations described under this path.
-    parameters: Optional[List[Union[ParamSchema, ReferenceSchema]]]
+    parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
 
 
 class PathObject(Schema):
