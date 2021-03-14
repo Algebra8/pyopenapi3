@@ -53,7 +53,7 @@ def _format_description(s: Optional[str]) -> Optional[str]:
 
 
 def parse_name_and_type_from_fmt_str(
-        formatted_str) -> Tuple[Optional[str], Optional[str]]:
+        formatted_str) -> Tuple[Optional[str]]:
     """
     Parse a formatted string and return the names
     of the args and their types.

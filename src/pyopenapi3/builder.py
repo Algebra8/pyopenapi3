@@ -184,18 +184,12 @@ class ServerBuilder:
         return self._builds
 
     def __call__(self, cls):
-        try:
-            server_object = self._schema(
-                **{k: v for k, v in cls.__dict__.items()
-                   if k in self._field_keys}
-            )
-        except ValidationError as e:
-            # TODO Error handling; if returned don't forget
-            #  to remove the else block
-            print(vars(e))
-            print(e.json())
-        else:
-            self._builds.append(server_object)
+        server_object = self._schema(
+            **{k: v for k, v in cls.__dict__.items()
+               if k in self._field_keys}
+        )
+
+        self._builds.append(server_object)
 
     def as_dict(self):
         return {"servers": [schema.dict() for schema in self.builds]}
