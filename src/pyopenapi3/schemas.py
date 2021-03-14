@@ -3,6 +3,8 @@ from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 from pydantic import BaseModel, Field, AnyUrl, EmailStr
 from pydantic.generics import GenericModel
 
+from .types import VariableAnyUrl
+
 
 class Schema(BaseModel):
 
@@ -135,7 +137,7 @@ class ServerSchema(Schema):
     """
 
     # A URL to the target host.
-    url: Optional[AnyUrl]
+    url: Optional[VariableAnyUrl]
     # An optional string describing the host designated by the URL.
     description: Optional[str]
     # A map between a variable name and its value.
