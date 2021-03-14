@@ -59,6 +59,7 @@ class ComponentSchema(Schema):
     properties: Dict[str, Any] = {}
 
 
+# TODO ReferenceObject
 class ReferenceSchema(Schema):
 
     ref: str = Field(..., alias="$ref")
@@ -229,6 +230,7 @@ class ResponseSchema(Schema):
     content: Optional[Dict[MediaType, SchemaMapping[Any]]]
 
 
+# TODO RequestBodyObject
 class RequestBodySchema(Schema):
     """Serialized Request Body Object.
     """
@@ -243,7 +245,7 @@ class RequestBodySchema(Schema):
     required: bool = False
     # TODO add examples
 
-
+# TODO ParameterObject
 class ParamSchema(SchemaMapping[FieldSchemaT]):
 
     name: str
@@ -254,26 +256,77 @@ class ParamSchema(SchemaMapping[FieldSchemaT]):
     required: bool = False
 
 
-class HttpMethodSchema(Schema):
+# TODO ExternalDocObject
+class ExternalDocObject(Schema):
+    ...
 
+
+# TODO SecurityReqObject
+class SecurityReqObject(Schema):
+    ...
+
+
+class CallbackObject(Schema):
+    ...
+
+
+class OperationObject(Schema):
+    """Schema for an Operation Object.
+
+    Describes a single API operation on a path. Based on spec
+    described in https://swagger.io/specification/#operation-object.
+    """
+
+    # A list of tags for API documentation control.
     tags: Optional[List[str]]
+
+    # 	A short summary of what the operation does.
     summary: Optional[str]
+
+    # A verbose explanation of the operation behavior.
     description: Optional[str]
+
+    # Additional external documentation for this operation.
+    external_docs: Optional[
+        ExternalDocObject
+    ] = Field(None, alias="externalDocs")
+
+    # Unique string used to identify the operation.
+    # TODO Computational?
     operation_id: Optional[str] = Field(None, alias="operationId")
-    parameters: Optional[List[ParamSchema]]
-    # The str for `responses` are the status codes,
-    # e.g. {'200': ResponseSchema()}
+
+    # A list of parameters that are applicable for this operation.
+    parameters: Optional[List[Union[ParamSchema, ReferenceSchema]]]
+
+    # The list of possible responses as they are returned from
+    # executing this operation.
     responses: Dict[str, ResponseSchema]
+
+    # The request body applicable for this operation.
     request_body: Optional[
-        RequestBodySchema
+        Union[RequestBodySchema, ReferenceSchema]
     ] = Field(None, alias="requestBody")
 
+    # A map of possible out-of band callbacks related to the
+    # parent operation.
+    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceSchema]]]
 
-class PathItemObjectSchema(Schema):
-    """Describes the operations available on a single path.
+    # Declares this operation to be deprecated.
+    deprecated: Optional[bool]
 
-    Based on spec described in
-    https://swagger.io/specification/#path-item-object.
+    # A declaration of which security mechanisms can be used
+    # for this operation.
+    security: List[SecurityReqObject]
+
+    # An alternative server array to service this operation.
+    servers: Optional[List[ServerSchema]]
+
+
+class PathItemObject(Schema):
+    """Schema for a Path Item Object.
+
+    Describes the operations available on a single path. Based
+    on spec described in https://swagger.io/specification/#path-item-object.
 
     A Path Item MAY be empty, due to ACL constraints.
     The path itself is still exposed to the documentation viewer
@@ -293,28 +346,28 @@ class PathItemObjectSchema(Schema):
     description: Optional[str]
 
     # A definition of a GET operation on this path.
-    get:        Optional[HttpMethodSchema]
+    get:        Optional[OperationObject]
 
     # A definition of a POST operation on this path.
-    post:       Optional[HttpMethodSchema]
+    post:       Optional[OperationObject]
 
     # A definition of a PUT operation on this path.
-    put:        Optional[HttpMethodSchema]
+    put:        Optional[OperationObject]
 
     # A definition of a PATCH operation on this path.
-    patch:      Optional[HttpMethodSchema]
+    patch:      Optional[OperationObject]
 
     # A definition of a DELETE operation on this path.
-    delete:     Optional[HttpMethodSchema]
+    delete:     Optional[OperationObject]
 
     # A definition of a HEAD operation on this path.
-    head:       Optional[HttpMethodSchema]
+    head:       Optional[OperationObject]
 
     # A definition of a OPTIONS operation on this path.
-    options:    Optional[HttpMethodSchema]
+    options:    Optional[OperationObject]
 
     # A definition of a TRACE operation on this path.
-    trace:      Optional[HttpMethodSchema]
+    trace:      Optional[OperationObject]
 
     # An alternative server array to service all operations
     # in this path.
@@ -325,9 +378,9 @@ class PathItemObjectSchema(Schema):
     parameters: Optional[List[Union[ParamSchema, ReferenceSchema]]]
 
 
-class PathObjectSchema(Schema):
+class PathObject(Schema):
 
     # Map a path to an HttpMethodMappingSchema,
     # e.g. {'/users': {'get': ..., 'post': ..., ...}}
-    paths: Dict[str, PathItemObjectSchema]
+    paths: Dict[str, PathItemObject]
 
