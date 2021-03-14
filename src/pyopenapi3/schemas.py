@@ -187,18 +187,16 @@ class ServerSchema(Schema):
 
 
 # Path schemas
-class MediaType(str):
+class MediaType(str, Enum):
 
-    # TODO use_enum_values
-
-    json = "application/json"
-    xml = "application/xml"
-    pdf = "application/pdf"
-    url_encoded = "application/x-www-form-urlencoded"
-    multipart = "multipart/form-data"
-    plain = "text/plain; charset=utf-8"
-    html = "text/html"
-    png = "image/png"
+    JSON = "application/json"
+    XML = "application/xml"
+    PDF = "application/pdf"
+    URL_ENCODED = "application/x-www-form-urlencoded"
+    MULTIPART = "multipart/form-data"
+    PLAIN = "text/plain; charset=utf-8"
+    HTML = "text/html"
+    PNG = "image/png"
 
 
 SchemaT = TypeVar("SchemaT", bound=Schema)
@@ -221,6 +219,7 @@ class ResponseSchema(Schema):
     class Config:
 
         arbitrary_types_allowed = True
+        use_enum_values = True
 
     description: str
     # Needs to be Any: there can be variable number of
@@ -239,6 +238,7 @@ class RequestBodySchema(Schema):
     class Config:
 
         arbitrary_types_allowed = True
+        use_enum_values = True
 
     description: Optional[str]
     # See ResponseSchema.content above for why we use Any.
