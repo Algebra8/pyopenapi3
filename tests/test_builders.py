@@ -1,6 +1,7 @@
+import pytest
+
 import sys
 import os
-
 # TODO remove when setup included.
 pyopenpath = os.path.abspath(
     os.path.join(
@@ -10,6 +11,8 @@ pyopenpath = os.path.abspath(
     )
 )
 sys.path.insert(0, pyopenpath)
+
+from pydantic import ValidationError
 
 from pyopenapi3.builder import InfoBuilder, ServerBuilder
 from .examples import info as info_examples, server as server_examples
@@ -91,7 +94,6 @@ def test_server_with_vars_success():
     }
     base_path_var = {"default": "v2"}
 
-
     @server_bldr
     class VarServer:
 
@@ -104,4 +106,46 @@ def test_server_with_vars_success():
         }
 
     assert server_bldr.as_dict() == server_examples.server_with_vars
+
+
+def test_server_with_vars_breaks():
+    server_bldr = ServerBuilder()
+
+    user_name_var = {
+        "default": "demo",
+        "description": (
+            "this value is assigned by the service provider, "
+            "in this example `gigantic-server.com`"
+        )
+    }
+    port_var = {
+        "enum": [
+            "8443",
+            "443"
+        ],
+        "default": "8443"
+    }
+    base_path_var = {"default": "v2"}
+    _url = "https://{username}.gigantic-server.com:{port}/{basePath}"
+
+    # Test with var not included. This should handle any
+    # misspelling cases as well.
+    with pytest.raises(ValidationError):
+        @server_bldr
+        class VarServer:
+
+            url = _url
+            variables = {'username': user_name_var, 'port': port_var}
+
+    # Test when extra vars are included.
+    with pytest.raises(ValidationError):
+        _vars = {"username": user_name_var, "port": port_var,
+                 "basePath": base_path_var, "extra_thing": {'default': 'b'}}
+
+        @server_bldr
+        class VarServer:
+
+            url = _url
+            variables = _vars
+
 
