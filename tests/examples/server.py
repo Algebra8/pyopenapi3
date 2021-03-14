@@ -1,7 +1,11 @@
 
 single_server = {
-  "url": "https://development.gigantic-server.com/v1",
-  "description": "Development server"
+  "servers": [
+    {
+      "url": "https://development.gigantic-server.com/v1",
+      "description": "Development server"
+    }
+  ]
 }
 
 multiple_servers = {
@@ -29,7 +33,8 @@ server_with_vars = {
       "variables": {
         "username": {
           "default": "demo",
-          "description": "this value is assigned by the service provider, in this example `gigantic-server.com`"
+          "description": ("this value is assigned by the service provider, "
+                          "in this example `gigantic-server.com`")
         },
         "port": {
           "enum": [
