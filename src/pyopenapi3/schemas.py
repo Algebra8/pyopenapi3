@@ -379,8 +379,17 @@ class PathItemObject(Schema):
 
 
 class PathObject(Schema):
+    """Schema for a Path Object.
 
-    # Map a path to an HttpMethodMappingSchema,
-    # e.g. {'/users': {'get': ..., 'post': ..., ...}}
+    Holds the relative paths to the individual endpoints and
+    their operations. Based on spec described in
+    https://swagger.io/specification/#paths-object.
+
+    The path is appended to the URL from the Server Object in order
+    to construct the full URL. The Paths MAY be empty, due to ACL
+    constraints.
+    """
+
+    # A relative path to an individual endpoint.
     paths: Dict[str, PathItemObject]
 
