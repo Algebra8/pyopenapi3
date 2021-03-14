@@ -269,21 +269,65 @@ class HttpMethodSchema(Schema):
     ] = Field(None, alias="requestBody")
 
 
-class HttpMethodMappingSchema(Schema):
+class PathItemObjectSchema(Schema):
+    """Describes the operations available on a single path.
 
+    Based on spec described in
+    https://swagger.io/specification/#path-item-object.
+
+    A Path Item MAY be empty, due to ACL constraints.
+    The path itself is still exposed to the documentation viewer
+    but they will not know which operations and parameters are
+    available.
+    """
+
+    # Allows for an external definition of this path item.
+    ref: Optional[str] = Field(None, alias="$ref")
+
+    # An optional, string summary, intended to apply to all
+    # operations in this path.
+    summary: Optional[str]
+
+    # An optional, string description, intended to apply to
+    # all operations in this path.
+    description: Optional[str]
+
+    # A definition of a GET operation on this path.
     get:        Optional[HttpMethodSchema]
+
+    # A definition of a POST operation on this path.
     post:       Optional[HttpMethodSchema]
+
+    # A definition of a PUT operation on this path.
     put:        Optional[HttpMethodSchema]
+
+    # A definition of a PATCH operation on this path.
     patch:      Optional[HttpMethodSchema]
+
+    # A definition of a DELETE operation on this path.
     delete:     Optional[HttpMethodSchema]
+
+    # A definition of a HEAD operation on this path.
     head:       Optional[HttpMethodSchema]
+
+    # A definition of a OPTIONS operation on this path.
     options:    Optional[HttpMethodSchema]
+
+    # A definition of a TRACE operation on this path.
     trace:      Optional[HttpMethodSchema]
 
+    # An alternative server array to service all operations
+    # in this path.
+    servers: Optional[List[ServerSchema]]
 
-class PathMappingSchema(Schema):
+    # A list of parameters that are applicable for all the
+    # operations described under this path.
+    parameters: Optional[List[Union[ParamSchema, ReferenceSchema]]]
+
+
+class PathObjectSchema(Schema):
 
     # Map a path to an HttpMethodMappingSchema,
     # e.g. {'/users': {'get': ..., 'post': ..., ...}}
-    paths: Dict[str, HttpMethodMappingSchema]
+    paths: Dict[str, PathItemObjectSchema]
 
