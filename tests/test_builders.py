@@ -14,8 +14,18 @@ sys.path.insert(0, pyopenpath)
 
 from pydantic import ValidationError
 
-from pyopenapi3.builder import InfoBuilder, ServerBuilder
-from .examples import info as info_examples, server as server_examples
+from pyopenapi3.builder import (
+    InfoBuilder,
+    ServerBuilder,
+    PathBuilder,
+    ComponentBuilder
+)
+from pyopenapi3.objects import Response, RequestBody, Array
+from .examples import (
+    info as info_examples,
+    server as server_examples,
+    path as path_examples
+)
 
 
 def test_info_object_success():
@@ -148,4 +158,28 @@ def test_server_with_vars_breaks():
             url = _url
             variables = _vars
 
+
+def test_path_success():
+    path_bldr = PathBuilder()
+    comp_bldr = ComponentBuilder()
+
+    @comp_bldr()
+    class pet:
+        ...
+
+    response = Response(
+        status=200, description="A list of pets.",
+        content=[("application/json", Array[pet])]
+    )
+
+    @path_bldr
+    class Path:
+
+        path = '/pets'
+
+        def get(self) -> (..., [response]):
+            """Returns all pets from the system that the user has access to"""
+            ...
+
+    assert path_bldr.as_dict()['paths'] == path_examples.path
 
