@@ -20,7 +20,7 @@ from pyopenapi3.builder import (
     PathBuilder,
     ComponentBuilder
 )
-from pyopenapi3.objects import Response, RequestBody, Array
+from pyopenapi3.objects import Response, Array
 from .examples import (
     info as info_examples,
     server as server_examples,
