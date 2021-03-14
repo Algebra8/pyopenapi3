@@ -1,7 +1,14 @@
 from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 from string import Formatter
 
-from pydantic import BaseModel, Field, AnyUrl, EmailStr, validator
+from pydantic import (
+    BaseModel,
+    Field,
+    AnyUrl,
+    EmailStr,
+    validator,
+    ValidationError
+)
 from pydantic.generics import GenericModel
 
 from .types import VariableAnyUrl
@@ -152,8 +159,9 @@ class ServerSchema(Schema):
 
     @validator('variables')
     def validate_url_with_vars(cls, v, values, **kwargs):
-        """Validate that any variables defined in `url` are present
-        in `variables`.
+        """
+        Validate that any, and only any, variables defined in `url`
+        are present in `variables`.
 
         E.g.,
             If the url is
@@ -166,7 +174,7 @@ class ServerSchema(Schema):
         args = [a for _, a, _, _, in Formatter().parse(_url)]
         if (
                 not all([var in v for var in args])
-                or len(args) > len(v)
+                or len(v) > len(args)
         ):
             raise ValueError(
                 "Any, and only any, variable defined in the url "
