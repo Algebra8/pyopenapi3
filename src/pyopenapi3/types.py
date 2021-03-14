@@ -32,13 +32,13 @@ def url_regex() -> Pattern[str]:
 
 
 class VariableAnyUrl(str):
-    """A Pydantic `AnyUrl` with that allows parameters.
+    """A Pydantic `AnyUrl` that allows parameters.
 
     An examples is
     "https://{username}.gigantic-server.com:{someport}/{basePath}"
 
-    `AnyUrl` will properly validate all of url except for the port:
-    it will expect the port to be a digit. Therefore, we `VariableAnyUrl`
+    `AnyUrl` will properly validate all of the url except for the port:
+    it will expect the port to be a digit. Therefore, `VariableAnyUrl`
     **should** be a wrapper for `AnyUrl` in all ways except for allowing
     `port` to be something other than a digit.
     """
