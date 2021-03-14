@@ -24,10 +24,10 @@ from .schemas import (
     ResponseSchema,
     RequestBodySchema,
     ParamSchema,
-    PathObjectSchema,
-    HttpMethodSchema,
+    PathObject,
+    OperationObject,
     SchemaMapping,
-    PathItemObjectSchema,
+    PathItemObject,
 )
 from ._yaml import make_yaml_ordered
 
@@ -493,7 +493,7 @@ class PathBuilder:
 
             # Here we can build the HttpMethodSchema...
             try:
-                method_schema = HttpMethodSchema(
+                method_schema = OperationObject(
                     tags=meta_info.get('tags'),
                     summary=meta_info.get('summary'),
                     operation_id=meta_info.get('operation_id'),
@@ -512,7 +512,7 @@ class PathBuilder:
 
         try:
             http_mapping_schema = \
-                PathItemObjectSchema(**http_mapping)
+                PathItemObject(**http_mapping)
         except ValidationError as e:
             # TODO error handling.
             raise ValueError(f"nooo\n{e.json()}")
@@ -524,7 +524,7 @@ class PathBuilder:
 
         if self.builds is None:
             try:
-                self.builds = PathObjectSchema(
+                self.builds = PathObject(
                     paths={path: http_mapping_schema}
                 )
             except ValidationError as e:
