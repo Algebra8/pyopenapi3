@@ -200,16 +200,46 @@ class MediaType(str, Enum):
 
 
 SchemaT = TypeVar("SchemaT", bound=Schema)
+# TODO ComponentSchema is different from ReferenceSchema.
 FieldSchemaT = TypeVar(
     "FieldSchemaT",
-    PrimitiveSchema, ArraySchema,
-    ComponentSchema, ReferenceSchema
+    PrimitiveSchema, ArraySchema
 )
+
+
+class ExampleObject(Schema):
+    ...
+
+
+class EncodingObject(Schema):
+    ...
 
 
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
+
+
+class MediaTypeObject(SchemaMapping[Any], Schema):
+    """Schema for a Media Type Object.
+
+    Each Media Type Object provides schema and examples for the media
+    type identified by its key, as described in
+    https://swagger.io/specification/#media-type-object.
+    """
+
+    # The schema defining the content of the request, response,
+    # or parameter.
+    schema: Union[Schema, ReferenceSchema]
+
+    # Example of the media type.
+    example: Any
+
+    # Examples of the media type.
+    examples: Dict[str, Union[ExampleObject, ReferenceSchema]]
+
+    # A map between a property name and its encoding information.
+    encoding: Dict[str, EncodingObject]
 
 
 class ResponseSchema(Schema):
@@ -230,9 +260,11 @@ class ResponseSchema(Schema):
     content: Optional[Dict[MediaType, SchemaMapping[Any]]]
 
 
-# TODO RequestBodyObject
-class RequestBodySchema(Schema):
-    """Serialized Request Body Object.
+class RequestBodyObject(Schema):
+    """Schema for a Request Body Object.
+
+    Describes a single request body, as described in
+    https://swagger.io/specification/#request-body-object.
     """
 
     class Config:
@@ -240,11 +272,16 @@ class RequestBodySchema(Schema):
         arbitrary_types_allowed = True
         use_enum_values = True
 
+    # A brief description of the request body.
     description: Optional[str]
-    # See ResponseSchema.content above for why we use Any.
-    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
-    required: bool = False
-    # TODO add examples
+
+    # The content of the request body.
+    # TODO Is schemamapping still necessary?
+    # content: Dict[MediaType, SchemaMapping[Any]]
+    content: Dict[MediaType, MediaTypeObject]
+
+    # Determines if the request body is required in the request.
+    required: Optional[bool]
 
 
 class ParamLocation(str, Enum):
