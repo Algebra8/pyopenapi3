@@ -220,7 +220,12 @@ class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
     schema_field: SchemaT = Field(..., alias='schema')
 
 
-class MediaTypeObject(SchemaMapping[Any], Schema):
+class SchemaObject(Schema):
+
+    ...
+
+
+class MediaTypeObject(Schema):
     """Schema for a Media Type Object.
 
     Each Media Type Object provides schema and examples for the media
@@ -230,16 +235,19 @@ class MediaTypeObject(SchemaMapping[Any], Schema):
 
     # The schema defining the content of the request, response,
     # or parameter.
-    schema: Union[Schema, ReferenceSchema]
+    schema_field: Union[
+        SchemaObject,
+        ReferenceSchema
+    ] = Field(..., alias='schema')
 
     # Example of the media type.
-    example: Any
+    example: Optional[Any]
 
     # Examples of the media type.
-    examples: Dict[str, Union[ExampleObject, ReferenceSchema]]
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceSchema]]]
 
     # A map between a property name and its encoding information.
-    encoding: Dict[str, EncodingObject]
+    encoding: Optional[Dict[str, EncodingObject]]
 
 
 class ResponseSchema(Schema):
