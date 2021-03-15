@@ -75,12 +75,18 @@ FieldSchema = Union[
 
 
 # Info metadata schemas.
-class ContactSchema(Schema):
+class ContactObject(Schema):
+    """Schema for a Contact Object.
+
+    Described in https://swagger.io/specification/#contact-object.
+    """
 
     # The identifying name of the contact person/organization.
     name: Optional[str]
+
     # The URL pointing to the contact information.
     url: Optional[AnyUrl]
+
     # The email address of the contact person/organization.
     email: Optional[EmailStr]
 
@@ -91,10 +97,16 @@ class ContactSchema(Schema):
         return d
 
 
-class LicenseSchema(Schema):
+class LicenseObject(Schema):
+    """Schema for a License Object.
+
+    License information for the exposed API, as described in
+    https://swagger.io/specification/#license-object.
+    """
 
     # The license name used for the API.
     name: str
+
     # A URL to the license used for the API.
     url: Optional[AnyUrl]
 
@@ -125,10 +137,10 @@ class InfoObject(Schema):
     terms_of_service: Optional[AnyUrl] = Field(None, alias="termsOfService")
 
     # The contact information for the exposed API.
-    contact: Optional[ContactSchema]
+    contact: Optional[ContactObject]
 
     # The license information for the exposed API.
-    license: Optional[LicenseSchema]
+    license: Optional[LicenseObject]
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
