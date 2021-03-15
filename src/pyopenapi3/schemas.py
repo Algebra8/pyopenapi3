@@ -215,14 +215,128 @@ class EncodingObject(Schema):
     ...
 
 
+class DiscriminatorObject(Schema):
+
+    ...
+
+
+class XMLObject(Schema):
+
+    ...
+
+
+# TODO ExternalDocObject
+class ExternalDocObject(Schema):
+    ...
+
+
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
 
 
-class SchemaObject(Schema):
+class JsonSchemaDef(Schema):
+    """Subset of JSON Schema Specification Wright Draft 00.
 
-    ...
+    Based on FastApi's OpenApi Models, SchemaBase.
+    """
+
+    title: Optional[str]
+    multiple_of: Optional[float] = Field(None, alias='multipleOf')
+    maximum: Optional[float]
+    exclusive_maximum: Optional[float] = Field(None, alias='exclusiveMaximum')
+    minimum: Optional[float]
+    exclusive_minimum: Optional[float] = Field(None, alias='exclusiveMinimum')
+    max_length: Optional[int] = Field(None, alias='maxLength', gte=0)
+    min_length: Optional[int] = Field(None, alias='minLength', gte=0)
+    pattern: Optional[str]
+    max_items: Optional[int] = Field(None, alias='maxItems', gte=0)
+    min_items: Optional[int] = Field(None, alias='minItems', gte=0)
+    unique_items: Optional[bool] = Field(None, alias='uniqueItems')
+    max_properties: Optional[int] = Field(None, alias='maxProperties', gte=0)
+    min_properties: Optional[int] = Field(None, alias='minProperties', gte=0)
+    required: Optional[List[str]]
+    enum: Optional[List[Any]]
+
+
+class OpenApiJsonSchemaDef(JsonSchemaDef):
+    """
+    Properties from JSON Schema definition with adjusted definitions
+    for OpenAPI Specification.
+
+    Based on FastApi's OpenApi Models, SchemaBase.
+    """
+
+    type: Optional[str]
+    all_of: Optional[List[Any]] = Field(None, alias='allOf')
+    one_of: Optional[List[Any]] = Field(None, alias='oneOf')
+    any_of: Optional[List[Any]] = Field(None, alias='anyOf')
+    not_: Optional[Any] = Field(None, alias="not")
+    items: Optional[Any]
+    properties: Optional[Dict[str, Any]]
+    additional_properties: Optional[
+        Union[Dict[str, Any], bool]
+    ] = Field(None, alias='additionalProperties')
+    description: Optional[str]
+    format: Optional[str]
+    default: Optional[Any]
+
+
+class SchemaObject(OpenApiJsonSchemaDef):
+    """Schema for a Schema Object.
+
+    The Schema Object allows the definition of input and output data
+    types, as described in https://swagger.io/specification/#schema-object.
+
+    These types can be objects, but also primitives and arrays.
+    """
+
+    # A true value adds "null" to the allowed type specified
+    # by the type keyword, only if type is explicitly defined
+    # within the same Schema Object.
+    nullable: Optional[bool]
+
+    # Adds support for polymorphism.
+    discriminator: Optional[DiscriminatorObject]
+
+    # Relevant only for Schema "properties" definitions.
+    # Declares the property as "read only".
+    read_only: Optional[bool] = Field(None, alias='readOnly')
+
+    # Relevant only for Schema "properties" definitions.
+    # Declares the property as "write only".
+    write_only: Optional[bool] = Field(None, alias='writeOnly')
+
+    # Adds additional metadata to describe the XML representation
+    # of this property.
+    xml: Optional[XMLObject]
+
+    # Additional external documentation for this schema.
+    external_docs: Optional[
+        ExternalDocObject
+    ] = Field(None, alias='externalDocs')
+
+    # A free-form property to include an example of an instance
+    # for this schema.
+    example: Optional[Any]
+
+    # Specifies that a schema is deprecated and SHOULD be
+    # transitioned out of usage.
+    deprecated: Optional[bool]
+
+    # The next few properties are taken from FastApi.Models.Schema:
+    # The idea is to allow recursive properties for the given fields.
+    # So, we overwrite some of the previous OpenApiJsonSchemaDef to
+    # include self type references.
+    all_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='allOf')
+    one_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='oneOf')
+    any_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='anyOf')
+    not_: Optional[OpenApiJsonSchemaDef] = Field(None, alias="not")
+    items: Optional[OpenApiJsonSchemaDef]
+    properties: Optional[Dict[str, OpenApiJsonSchemaDef]]
+    additional_properties: Optional[
+        Union[Dict[str, OpenApiJsonSchemaDef], bool]
+    ] = Field(None, alias='additionalProperties')
 
 
 class MediaTypeObject(Schema):
@@ -333,11 +447,6 @@ class ParameterObject(SchemaMapping[FieldSchemaT]):
     allow_empty_value: Optional[bool] = Field(None, alias='allowEmptyValue')
 
 
-# TODO ExternalDocObject
-class ExternalDocObject(Schema):
-    ...
-
-
 # TODO SecurityReqObject
 class SecurityReqObject(Schema):
     ...
@@ -381,7 +490,7 @@ class OperationObject(Schema):
 
     # The request body applicable for this operation.
     request_body: Optional[
-        Union[RequestBodySchema, ReferenceSchema]
+        Union[RequestBodyObject, ReferenceSchema]
     ] = Field(None, alias="requestBody")
 
     # A map of possible out-of band callbacks related to the
