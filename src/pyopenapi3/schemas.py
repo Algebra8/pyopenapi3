@@ -334,11 +334,6 @@ class LinkObject(Schema):
     server: Optional[ServerObject]
 
 
-class HeaderObject(Schema):
-
-    ...
-
-
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
@@ -473,6 +468,62 @@ class MediaTypeObject(Schema):
     encoding: Optional[Dict[str, EncodingObject]]
 
 
+class ParamLocation(str, Enum):
+
+    PATH = 'path'
+    QUERY = 'query'
+    HEADER = 'header'
+    COOKIE = 'cookie'
+
+
+class ParameterObject(SchemaMapping[FieldSchemaT]):
+    """Schema for a Parameter Object.
+
+    Describes a single operation parameter, as described in
+    https://swagger.io/specification/#parameter-object.
+
+    A unique parameter is defined by a combination of a name and location.
+    """
+
+    class Config:
+
+        use_enum_values = True
+
+    # The name of the parameter.
+    name: str
+
+    # The location of the parameter.
+    in_field: ParamLocation = Field(..., alias='in')
+
+    # A brief description of the parameter.
+    description: Optional[str]
+
+    # Determines whether this parameter is mandatory.
+    required: Optional[bool]
+
+    # Specifies that a parameter is deprecated and SHOULD
+    # be transitioned out of usage.
+    deprecated: Optional[bool]
+
+    # Sets the ability to pass empty-valued parameters.
+    allow_empty_value: Optional[bool] = Field(None, alias='allowEmptyValue')
+
+
+class HeaderObject(ParameterObject):
+    """Schema for a Header Object.
+
+    Described in https://swagger.io/specification/#header-object.
+    """
+
+    # `name` MUST NOT be specified, it is given in the corresponding
+    # headers map.
+    name: Optional[str] = Field(None, const=True)
+
+    # `in` MUST NOT be specified, it is implicitly in header.
+    in_field: ParamLocation = Field(ParamLocation.HEADER,
+                                    const=True, alias='in')
+
+
 class ResponseObject(Schema):
     """Schema for a Response Object.
 
@@ -523,48 +574,6 @@ class RequestBodyObject(Schema):
     required: Optional[bool]
 
 
-class ParamLocation(str, Enum):
-
-    PATH = 'path'
-    QUERY = 'query'
-    HEADER = 'header'
-    COOKIE = 'cookie'
-
-
-class ParameterObject(SchemaMapping[FieldSchemaT]):
-    """Schema for a Parameter Object.
-
-    Describes a single operation parameter, as described in
-    https://swagger.io/specification/#parameter-object.
-
-    A unique parameter is defined by a combination of a name and location.
-    """
-
-    class Config:
-
-        use_enum_values = True
-
-    # The name of the parameter.
-    name: str
-
-    # The location of the parameter.
-    in_field: ParamLocation = Field(..., alias='in')
-
-    # A brief description of the parameter.
-    description: Optional[str]
-
-    # Determines whether this parameter is mandatory.
-    required: Optional[bool]
-
-    # Specifies that a parameter is deprecated and SHOULD
-    # be transitioned out of usage.
-    deprecated: Optional[bool]
-
-    # Sets the ability to pass empty-valued parameters.
-    allow_empty_value: Optional[bool] = Field(None, alias='allowEmptyValue')
-
-
-# TODO SecurityReqObject
 class SecurityReqObject(Schema):
     ...
 
