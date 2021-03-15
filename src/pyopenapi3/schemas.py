@@ -291,9 +291,18 @@ class XMLObject(Schema):
     wrapped: Optional[bool]
 
 
-# TODO ExternalDocObject
 class ExternalDocObject(Schema):
-    ...
+    """Schema for an External Documentation Object.
+
+    A metadata object that allows for more fine-tuned XML model
+    definitions. Described in
+    https://swagger.io/specification/#external-documentation-object
+    """
+    # A short description of the target documentation.
+    description: Optional[str]
+
+    # The URL for the target documentation.
+    url: AnyUrl
 
 
 class LinkObject(Schema):
