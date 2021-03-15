@@ -75,12 +75,18 @@ FieldSchema = Union[
 
 
 # Info metadata schemas.
-class ContactSchema(Schema):
+class ContactObject(Schema):
+    """Schema for a Contact Object.
+
+    Described in https://swagger.io/specification/#contact-object.
+    """
 
     # The identifying name of the contact person/organization.
     name: Optional[str]
+
     # The URL pointing to the contact information.
     url: Optional[AnyUrl]
+
     # The email address of the contact person/organization.
     email: Optional[EmailStr]
 
@@ -91,10 +97,16 @@ class ContactSchema(Schema):
         return d
 
 
-class LicenseSchema(Schema):
+class LicenseObject(Schema):
+    """Schema for a License Object.
+
+    License information for the exposed API, as described in
+    https://swagger.io/specification/#license-object.
+    """
 
     # The license name used for the API.
     name: str
+
     # A URL to the license used for the API.
     url: Optional[AnyUrl]
 
@@ -105,22 +117,30 @@ class LicenseSchema(Schema):
         return d
 
 
-class InfoSchema(Schema):
-    """Serialized Info Object.
+class InfoObject(Schema):
+    """Schema for a Schema Object.
+
+    The object provides metadata about the API, as described in
+    https://swagger.io/specification/#info-object.
     """
 
     # The title of the API.
     title: str
+
     # The version of the OpenAPI document.
     version: str
+
     # A short description of the API.
     description: Optional[str]
+
     # A URL to the Terms of Service for the API.
     terms_of_service: Optional[AnyUrl] = Field(None, alias="termsOfService")
+
     # The contact information for the exposed API.
-    contact: Optional[ContactSchema]
+    contact: Optional[ContactObject]
+
     # The license information for the exposed API.
-    license: Optional[LicenseSchema]
+    license: Optional[LicenseObject]
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
@@ -130,28 +150,41 @@ class InfoSchema(Schema):
 
 
 # Server schemas
-class ServerVariableSchema(Schema):
+class ServerVariableObject(Schema):
+    """Schema for a Server Variable Object.
+
+    An object representing a Server Variable for server URL template
+    substitution, as described in
+    https://swagger.io/specification/#server-variable-object.
+    """
 
     # The default value to use for substitution, which SHALL
     # be sent if an alternate value is not supplied.
     default: str
+
     # An enumeration of string values to be used if the
     # substitution options are from a limited set.
     enum: Optional[List[str]]
+
     # An optional description for the server variable.
     description: Optional[str]
 
 
-class ServerSchema(Schema):
-    """Serialized Server Object.
+class ServerObject(Schema):
+    """Schema for a Server Object.
+
+    An object representing a Server, as described in
+    https://swagger.io/specification/#server-object.
     """
 
     # A URL to the target host.
     url: Optional[VariableAnyUrl]
+
     # An optional string describing the host designated by the URL.
     description: Optional[str]
+
     # A map between a variable name and its value.
-    variables: Optional[Dict[str, ServerVariableSchema]]
+    variables: Optional[Dict[str, ServerVariableObject]]
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
@@ -522,7 +555,7 @@ class OperationObject(Schema):
     security: List[SecurityReqObject]
 
     # An alternative server array to service this operation.
-    servers: Optional[List[ServerSchema]]
+    servers: Optional[List[ServerObject]]
 
     # Taken from RFC7231:
     # https://tools.ietf.org/html/rfc7231#section-6
@@ -600,7 +633,7 @@ class PathItemObject(Schema):
 
     # An alternative server array to service all operations
     # in this path.
-    servers: Optional[List[ServerSchema]]
+    servers: Optional[List[ServerObject]]
 
     # A list of parameters that are applicable for all the
     # operations described under this path.
