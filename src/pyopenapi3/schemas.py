@@ -150,28 +150,41 @@ class InfoObject(Schema):
 
 
 # Server schemas
-class ServerVariableSchema(Schema):
+class ServerVariableObject(Schema):
+    """Schema for a Server Variable Object.
+
+    An object representing a Server Variable for server URL template
+    substitution, as described in
+    https://swagger.io/specification/#server-variable-object.
+    """
 
     # The default value to use for substitution, which SHALL
     # be sent if an alternate value is not supplied.
     default: str
+
     # An enumeration of string values to be used if the
     # substitution options are from a limited set.
     enum: Optional[List[str]]
+
     # An optional description for the server variable.
     description: Optional[str]
 
 
-class ServerSchema(Schema):
-    """Serialized Server Object.
+class ServerObject(Schema):
+    """Schema for a Server Object.
+
+    An object representing a Server, as described in
+    https://swagger.io/specification/#server-object.
     """
 
     # A URL to the target host.
     url: Optional[VariableAnyUrl]
+
     # An optional string describing the host designated by the URL.
     description: Optional[str]
+
     # A map between a variable name and its value.
-    variables: Optional[Dict[str, ServerVariableSchema]]
+    variables: Optional[Dict[str, ServerVariableObject]]
 
     def dict(self, *args, **kwargs):
         d = super().dict(*args, **kwargs)
