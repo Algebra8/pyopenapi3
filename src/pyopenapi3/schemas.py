@@ -249,8 +249,21 @@ class EncodingObject(Schema):
 
 
 class DiscriminatorObject(Schema):
+    """Schema for a Discriminator Object.
 
-    ...
+    When request bodies or response payloads may be one of a number
+    of different schemas, a discriminator object can be used to aid
+    in serialization, deserialization, and validation. Described
+    in https://swagger.io/specification/#discriminator-object.
+    """
+
+    # The name of the property in the payload that will hold
+    # the discriminator value.
+    property_name: str = Field(..., alias='propertyName')
+
+    # An object to hold mappings between payload values and
+    # schema names or references.
+    mapping: Optional[Dict[str, str]]
 
 
 class XMLObject(Schema):
