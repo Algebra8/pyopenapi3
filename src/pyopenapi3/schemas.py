@@ -101,12 +101,7 @@ class ComponentsObject(Schema):
     # An object to hold reusable Callback Objects.
     callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
 
-    # type: str = 'object'
-    # description: Optional[str]
-    # properties: Dict[str, Any] = {}
 
-
-# TODO ReferenceObject
 class ReferenceObject(Schema):
 
     ref: str = Field(..., alias="$ref")
