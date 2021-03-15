@@ -267,8 +267,28 @@ class DiscriminatorObject(Schema):
 
 
 class XMLObject(Schema):
+    """Schema for an XML Object.
 
-    ...
+    A metadata object that allows for more fine-tuned XML model
+    definitions. Described in https://swagger.io/specification/#xml-object.
+    """
+
+    # Replaces the name of the element/attribute used for the
+    # described schema property.
+    name: Optional[str]
+
+    # The URI of the namespace definition.
+    namespace: Optional[AnyUrl]
+
+    # The prefix to be used for the name.
+    prefix: Optional[str]
+
+    # Declares whether the property definition translates to
+    # an attribute instead of an element.
+    attribute: Optional[bool]
+
+    # MAY be used only for an array definition.
+    wrapped: Optional[bool]
 
 
 # TODO ExternalDocObject
