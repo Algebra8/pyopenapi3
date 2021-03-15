@@ -524,6 +524,32 @@ class OperationObject(Schema):
     # An alternative server array to service this operation.
     servers: Optional[List[ServerSchema]]
 
+    # Taken from RFC7231:
+    # https://tools.ietf.org/html/rfc7231#section-6
+    _status_codes = range(100, 600)
+
+    @validator('responses')
+    def validate_response_mapping(cls, v):
+        mut_v = {k: v for k, v in v.items()}
+        mut_v.pop('default', None)
+        for key in mut_v.keys():
+            try:
+                status_code = int(key)
+            except ValueError:
+                # Another non-digit key
+                raise ValueError(
+                    "The only non-digit key for a response "
+                    f"must be 'default'. Can't include '{key}'"
+                ) from None
+            else:
+                if status_code not in cls._status_codes:
+                    raise ValueError(
+                        "Only valid status codes allowed. Must be between "
+                        f"100 and 511 (inclusive). Not {status_code}."
+                    )
+
+        return v
+
 
 class PathItemObject(Schema):
     """Schema for a Path Item Object.
