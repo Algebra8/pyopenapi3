@@ -55,11 +55,55 @@ class ArraySchema(Schema):
     ]
 
 
-class ComponentSchema(Schema):
+class SecuritySchemeObject(Schema):
+    ...
 
-    type: str = 'object'
-    description: Optional[str]
-    properties: Dict[str, Any] = {}
+
+class ComponentsObject(Schema):
+    """Schema for a Components Object.
+
+    Holds a set of reusable objects for different aspects of the OAS.
+    As described in https://swagger.io/specification/#components-object.
+
+    All objects defined within the components object will have no effect
+    on the API unless they are explicitly referenced from properties
+    outside the components object. Note `ReferenceObject` for referencing.
+    """
+
+    # An object to hold reusable Schema Objects.
+    schemas: Optional[Dict[str, Union[SchemaObject, ReferenceObject]]]
+
+    # An object to hold reusable Response Objects.
+    responses: Optional[Dict[str, Union[ResponseObject, ReferenceObject]]]
+
+    # An object to hold reusable Parameter Objects.
+    parameters: Optional[Dict[str, Union[ParameterObject, ReferenceObject]]]
+
+    # An object to hold reusable Example Objects.
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
+
+    # An object to hold reusable Request Body Objects.
+    request_bodies: Optional[
+        Dict[str, Union[RequestBodyObject, ReferenceObject]]
+    ] = Field(None, alias='requestBodies')
+
+    # An object to hold reusable Header Objects.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
+
+    # An object to hold reusable Security Scheme Objects.
+    security_schemes: Optional[
+        Dict[str, Union[SecuritySchemeObject, ReferenceObject]]
+    ] = Field(None, alias='securitySchemes')
+
+    # An object to hold reusable Link Objects.
+    links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
+
+    # An object to hold reusable Callback Objects.
+    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
+
+    # type: str = 'object'
+    # description: Optional[str]
+    # properties: Dict[str, Any] = {}
 
 
 # TODO ReferenceObject
@@ -71,7 +115,7 @@ class ReferenceObject(Schema):
 FieldSchema = Union[
     PrimitiveSchema,
     ArraySchema,
-    ComponentSchema,
+    ComponentsObject,
     ReferenceObject
 ]
 
@@ -758,7 +802,7 @@ class PathItemObject(Schema):
     parameters: Optional[List[Union[ParameterObject, ReferenceObject]]]
 
 
-class PathObject(Schema):
+class PathsObject(Schema):
     """Schema for a Path Object.
 
     Holds the relative paths to the individual endpoints and
@@ -773,3 +817,58 @@ class PathObject(Schema):
     # A relative path to an individual endpoint.
     paths: Dict[str, PathItemObject]
 
+
+class TagObject(Schema):
+    """Schema for a Tag Object.
+
+    Adds metadata to a single tag that is used by the Operation Object.
+    Described in https://swagger.io/specification/#tag-object.
+    """
+
+    # The name of the tag.
+    name: str
+
+    # A short description for the tag.
+    description: Optional[str]
+
+    # Additional external documentation for this tag.
+    external_docs: Optional[ExternalDocObject] = Field(None,
+                                                       alias='externalDocs')
+
+
+class OpenApiObject(Schema):
+    """Schema for an OpenAPI Object.
+
+    This is the root document object of the OpenAPI document, as
+    described in https://swagger.io/specification/#openapi-object.
+    """
+
+    # This string MUST be the semantic version number of
+    # the OpenAPI Specification version that the OpenAPI
+    # document uses.
+    openapi: str
+
+    # Provides metadata about the API.
+    info: InfoObject
+
+    # An array of Server Objects, which provide connectivity
+    # information to a target server.
+    servers: Optional[List[ServerObject]]
+
+    # The available paths and operations for the API.
+    paths: PathsObject
+
+    # An element to hold various schemas for the specification.
+    components: Optional[ComponentsObject]
+
+    # A declaration of which security mechanisms can be used
+    # across the API.
+    security: Optional[List[SecurityReqObject]]
+
+    # A list of tags used by the specification with additional
+    # metadata.
+    tags: Optional[List[TagObject]]
+
+    # Additional external documentation.
+    external_docs: Optional[ExternalDocObject] = Field(None,
+                                                       alias='externalDocs')
