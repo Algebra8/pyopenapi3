@@ -243,7 +243,22 @@ FieldSchemaT = TypeVar(
 
 
 class ExampleObject(Schema):
-    ...
+    """Schema for an Example Object.
+
+    Described in https://swagger.io/specification/#example-object.
+    """
+
+    # Short description for the example.
+    summary: Optional[str]
+
+    # Long description for the example.
+    description: Optional[str]
+
+    # Embedded literal example.
+    value: Any
+
+    # A URL that points to the literal example.
+    external_value: Optional[AnyUrl] = Field(None, alias='externalValue')
 
 
 class EncodingObject(Schema):
