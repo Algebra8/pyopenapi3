@@ -63,7 +63,7 @@ class ComponentSchema(Schema):
 
 
 # TODO ReferenceObject
-class ReferenceSchema(Schema):
+class ReferenceObject(Schema):
 
     ref: str = Field(..., alias="$ref")
 
@@ -72,7 +72,7 @@ FieldSchema = Union[
     PrimitiveSchema,
     ArraySchema,
     ComponentSchema,
-    ReferenceSchema
+    ReferenceObject
 ]
 
 
@@ -272,7 +272,7 @@ class EncodingObject(Schema):
     content_type: Optional[str] = Field(None, alias='contentType')
 
     # A map allowing additional information to be provided as headers.
-    headers: Optional[Dict[str, Union[HeaderObject, ReferenceSchema]]]
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
 
     # Describes how a specific property value will be serialized
     # depending on its type.
@@ -496,14 +496,14 @@ class MediaTypeObject(Schema):
     # or parameter.
     schema_field: Union[
         SchemaObject,
-        ReferenceSchema
+        ReferenceObject
     ] = Field(..., alias='schema')
 
     # Example of the media type.
     example: Optional[Any]
 
     # Examples of the media type.
-    examples: Optional[Dict[str, Union[ExampleObject, ReferenceSchema]]]
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
 
     # A map between a property name and its encoding information.
     encoding: Optional[Dict[str, EncodingObject]]
@@ -582,7 +582,7 @@ class ResponseObject(Schema):
     description: str
 
     # Maps a header name to its definition.
-    headers: Optional[Dict[str, Union[HeaderObject, ReferenceSchema]]]
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
 
     # A map containing descriptions of potential response payloads.
     # The key is a media type or media type range and the value
@@ -590,7 +590,7 @@ class ResponseObject(Schema):
     content: Optional[Dict[MediaType, SchemaMapping[Any]]]
 
     # A map of operations links that can be followed from the response.
-    links: Optional[Dict[str, Union[LinkObject, ReferenceSchema]]]
+    links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
 
 
 class RequestBodyObject(Schema):
@@ -650,7 +650,7 @@ class OperationObject(Schema):
     operation_id: Optional[str] = Field(None, alias="operationId")
 
     # A list of parameters that are applicable for this operation.
-    parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
+    parameters: Optional[List[Union[ParameterObject, ReferenceObject]]]
 
     # The list of possible responses as they are returned from
     # executing this operation. This includes `default`.
@@ -658,12 +658,12 @@ class OperationObject(Schema):
 
     # The request body applicable for this operation.
     request_body: Optional[
-        Union[RequestBodyObject, ReferenceSchema]
+        Union[RequestBodyObject, ReferenceObject]
     ] = Field(None, alias="requestBody")
 
     # A map of possible out-of band callbacks related to the
     # parent operation.
-    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceSchema]]]
+    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
 
     # Declares this operation to be deprecated.
     deprecated: Optional[bool]
@@ -755,7 +755,7 @@ class PathItemObject(Schema):
 
     # A list of parameters that are applicable for all the
     # operations described under this path.
-    parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
+    parameters: Optional[List[Union[ParameterObject, ReferenceObject]]]
 
 
 class PathObject(Schema):
