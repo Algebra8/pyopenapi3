@@ -230,6 +230,15 @@ class ExternalDocObject(Schema):
     ...
 
 
+class LinkObject(Schema):
+    ...
+
+
+class HeaderObject(Schema):
+
+    ...
+
+
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
@@ -364,8 +373,12 @@ class MediaTypeObject(Schema):
     encoding: Optional[Dict[str, EncodingObject]]
 
 
-class ResponseSchema(Schema):
-    """Serialized Response Object.
+class ResponseObject(Schema):
+    """Schema for a Response Object.
+
+    Describes a single response from an API Operation, including
+    design-time, static links to operations based on the response,
+    as described in https://swagger.io/specification/#response-object.
     """
 
     class Config:
@@ -373,13 +386,19 @@ class ResponseSchema(Schema):
         arbitrary_types_allowed = True
         use_enum_values = True
 
+    # A short description of the response.
     description: str
-    # Needs to be Any: there can be variable number of
-    # FieldSchemaT types, but we don't have variadic generics.
-    # So, we use FieldSchemaT to validate the content's schema,
-    # and use Any here to prevent Pydantic from arbitrarily
-    # picking a schema belonging to some constraint in FieldSchemaT.
+
+    # Maps a header name to its definition.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceSchema]]]
+
+    # A map containing descriptions of potential response payloads.
+    # The key is a media type or media type range and the value
+    # describes it.
     content: Optional[Dict[MediaType, SchemaMapping[Any]]]
+
+    # A map of operations links that can be followed from the response.
+    links: Optional[Dict[str, Union[LinkObject, ReferenceSchema]]]
 
 
 class RequestBodyObject(Schema):
@@ -398,8 +417,6 @@ class RequestBodyObject(Schema):
     description: Optional[str]
 
     # The content of the request body.
-    # TODO Is schemamapping still necessary?
-    # content: Dict[MediaType, SchemaMapping[Any]]
     content: Dict[MediaType, MediaTypeObject]
 
     # Determines if the request body is required in the request.
@@ -485,8 +502,8 @@ class OperationObject(Schema):
     parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
 
     # The list of possible responses as they are returned from
-    # executing this operation.
-    responses: Dict[str, ResponseSchema]
+    # executing this operation. This includes `default`.
+    responses: Dict[str, ResponseObject]
 
     # The request body applicable for this operation.
     request_body: Optional[
