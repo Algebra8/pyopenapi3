@@ -105,20 +105,28 @@ class LicenseSchema(Schema):
         return d
 
 
-class InfoSchema(Schema):
-    """Serialized Info Object.
+class InfoObject(Schema):
+    """Schema for a Schema Object.
+
+    The object provides metadata about the API, as described in
+    https://swagger.io/specification/#info-object.
     """
 
     # The title of the API.
     title: str
+
     # The version of the OpenAPI document.
     version: str
+
     # A short description of the API.
     description: Optional[str]
+
     # A URL to the Terms of Service for the API.
     terms_of_service: Optional[AnyUrl] = Field(None, alias="termsOfService")
+
     # The contact information for the exposed API.
     contact: Optional[ContactSchema]
+
     # The license information for the exposed API.
     license: Optional[LicenseSchema]
 
