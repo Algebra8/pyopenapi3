@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 from string import Formatter
 from enum import Enum
@@ -245,7 +247,31 @@ class ExampleObject(Schema):
 
 
 class EncodingObject(Schema):
-    ...
+    """Schema for an Encoding Object.
+
+    A single encoding definition applied to a single schema property.
+    Described in https://swagger.io/specification/#encoding-object.
+    """
+
+    # The Content-Type for encoding a specific property.
+    content_type: Optional[str] = Field(None, alias='contentType')
+
+    # A map allowing additional information to be provided as headers.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceSchema]]]
+
+    # Describes how a specific property value will be serialized
+    # depending on its type.
+    style: Optional[str]
+
+    # When this is true, property values of type array or object
+    # generate separate parameters for each value of the array,
+    # or key-value-pair of the map.
+    explode: Optional[bool]
+
+    # Determines whether the parameter value SHOULD allow reserved
+    # characters, as defined by RFC3986 :/?#[]@!$&'()*+,;= to be
+    # included without percent-encoding.
+    allow_reserved: Optional[bool] = Field(None, alias='allowReserved')
 
 
 class DiscriminatorObject(Schema):
@@ -578,6 +604,7 @@ class SecurityReqObject(Schema):
     ...
 
 
+# TODO Callback Object
 class CallbackObject(Schema):
     ...
 
