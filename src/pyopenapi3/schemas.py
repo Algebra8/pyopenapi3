@@ -294,9 +294,9 @@ class XMLObject(Schema):
 class ExternalDocObject(Schema):
     """Schema for an External Documentation Object.
 
-    A metadata object that allows for more fine-tuned XML model
-    definitions. Described in
-    https://swagger.io/specification/#external-documentation-object
+    Allows referencing an external resource for extended documentation.
+    Described in
+    https://swagger.io/specification/#external-documentation-object.
     """
     # A short description of the target documentation.
     description: Optional[str]
@@ -306,7 +306,32 @@ class ExternalDocObject(Schema):
 
 
 class LinkObject(Schema):
-    ...
+    """Schema for a Link Object.
+
+    The Link object represents a possible design-time link for a response.
+    Described in https://swagger.io/specification/#link-object.
+    """
+
+    # A relative or absolute URI reference to an OAS operation.
+    operation_ref: Optional[str] = Field(None, alias='operationRef')
+
+    # The name of an existing, resolvable OAS operation, as defined
+    # with a unique operationId.
+    operation_id: Optional[str] = Field(None, alias='operationId')
+
+    # A map representing parameters to pass to an operation as
+    # specified with operationId or identified via operationRef.
+    parameters: Optional[Dict[str, Any]]
+
+    # A literal value or {expression} to use as a request body when
+    # calling the target operation.
+    request_body: Optional[Any] = Field(None, alias='requestBody')
+
+    # A description of the link.
+    description: Optional[str]
+
+    # A server object to be used by the target operation.
+    server: Optional[ServerObject]
 
 
 class HeaderObject(Schema):
