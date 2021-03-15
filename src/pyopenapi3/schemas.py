@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 from string import Formatter
 from enum import Enum
@@ -53,15 +55,54 @@ class ArraySchema(Schema):
     ]
 
 
-class ComponentSchema(Schema):
-
-    type: str = 'object'
-    description: Optional[str]
-    properties: Dict[str, Any] = {}
+class SecuritySchemeObject(Schema):
+    ...
 
 
-# TODO ReferenceObject
-class ReferenceSchema(Schema):
+class ComponentsObject(Schema):
+    """Schema for a Components Object.
+
+    Holds a set of reusable objects for different aspects of the OAS.
+    As described in https://swagger.io/specification/#components-object.
+
+    All objects defined within the components object will have no effect
+    on the API unless they are explicitly referenced from properties
+    outside the components object. Note `ReferenceObject` for referencing.
+    """
+
+    # An object to hold reusable Schema Objects.
+    schemas: Optional[Dict[str, Union[SchemaObject, ReferenceObject]]]
+
+    # An object to hold reusable Response Objects.
+    responses: Optional[Dict[str, Union[ResponseObject, ReferenceObject]]]
+
+    # An object to hold reusable Parameter Objects.
+    parameters: Optional[Dict[str, Union[ParameterObject, ReferenceObject]]]
+
+    # An object to hold reusable Example Objects.
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
+
+    # An object to hold reusable Request Body Objects.
+    request_bodies: Optional[
+        Dict[str, Union[RequestBodyObject, ReferenceObject]]
+    ] = Field(None, alias='requestBodies')
+
+    # An object to hold reusable Header Objects.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
+
+    # An object to hold reusable Security Scheme Objects.
+    security_schemes: Optional[
+        Dict[str, Union[SecuritySchemeObject, ReferenceObject]]
+    ] = Field(None, alias='securitySchemes')
+
+    # An object to hold reusable Link Objects.
+    links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
+
+    # An object to hold reusable Callback Objects.
+    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
+
+
+class ReferenceObject(Schema):
 
     ref: str = Field(..., alias="$ref")
 
@@ -69,8 +110,8 @@ class ReferenceSchema(Schema):
 FieldSchema = Union[
     PrimitiveSchema,
     ArraySchema,
-    ComponentSchema,
-    ReferenceSchema
+    ComponentsObject,
+    ReferenceObject
 ]
 
 
@@ -241,35 +282,136 @@ FieldSchemaT = TypeVar(
 
 
 class ExampleObject(Schema):
-    ...
+    """Schema for an Example Object.
+
+    Described in https://swagger.io/specification/#example-object.
+    """
+
+    # Short description for the example.
+    summary: Optional[str]
+
+    # Long description for the example.
+    description: Optional[str]
+
+    # Embedded literal example.
+    value: Any
+
+    # A URL that points to the literal example.
+    external_value: Optional[AnyUrl] = Field(None, alias='externalValue')
 
 
 class EncodingObject(Schema):
-    ...
+    """Schema for an Encoding Object.
+
+    A single encoding definition applied to a single schema property.
+    Described in https://swagger.io/specification/#encoding-object.
+    """
+
+    # The Content-Type for encoding a specific property.
+    content_type: Optional[str] = Field(None, alias='contentType')
+
+    # A map allowing additional information to be provided as headers.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
+
+    # Describes how a specific property value will be serialized
+    # depending on its type.
+    style: Optional[str]
+
+    # When this is true, property values of type array or object
+    # generate separate parameters for each value of the array,
+    # or key-value-pair of the map.
+    explode: Optional[bool]
+
+    # Determines whether the parameter value SHOULD allow reserved
+    # characters, as defined by RFC3986 :/?#[]@!$&'()*+,;= to be
+    # included without percent-encoding.
+    allow_reserved: Optional[bool] = Field(None, alias='allowReserved')
 
 
 class DiscriminatorObject(Schema):
+    """Schema for a Discriminator Object.
 
-    ...
+    When request bodies or response payloads may be one of a number
+    of different schemas, a discriminator object can be used to aid
+    in serialization, deserialization, and validation. Described
+    in https://swagger.io/specification/#discriminator-object.
+    """
+
+    # The name of the property in the payload that will hold
+    # the discriminator value.
+    property_name: str = Field(..., alias='propertyName')
+
+    # An object to hold mappings between payload values and
+    # schema names or references.
+    mapping: Optional[Dict[str, str]]
 
 
 class XMLObject(Schema):
+    """Schema for an XML Object.
 
-    ...
+    A metadata object that allows for more fine-tuned XML model
+    definitions. Described in https://swagger.io/specification/#xml-object.
+    """
+
+    # Replaces the name of the element/attribute used for the
+    # described schema property.
+    name: Optional[str]
+
+    # The URI of the namespace definition.
+    namespace: Optional[AnyUrl]
+
+    # The prefix to be used for the name.
+    prefix: Optional[str]
+
+    # Declares whether the property definition translates to
+    # an attribute instead of an element.
+    attribute: Optional[bool]
+
+    # MAY be used only for an array definition.
+    wrapped: Optional[bool]
 
 
-# TODO ExternalDocObject
 class ExternalDocObject(Schema):
-    ...
+    """Schema for an External Documentation Object.
+
+    Allows referencing an external resource for extended documentation.
+    Described in
+    https://swagger.io/specification/#external-documentation-object.
+    """
+    # A short description of the target documentation.
+    description: Optional[str]
+
+    # The URL for the target documentation.
+    url: AnyUrl
 
 
 class LinkObject(Schema):
-    ...
+    """Schema for a Link Object.
 
+    The Link object represents a possible design-time link for a response.
+    Described in https://swagger.io/specification/#link-object.
+    """
 
-class HeaderObject(Schema):
+    # A relative or absolute URI reference to an OAS operation.
+    operation_ref: Optional[str] = Field(None, alias='operationRef')
 
-    ...
+    # The name of an existing, resolvable OAS operation, as defined
+    # with a unique operationId.
+    operation_id: Optional[str] = Field(None, alias='operationId')
+
+    # A map representing parameters to pass to an operation as
+    # specified with operationId or identified via operationRef.
+    parameters: Optional[Dict[str, Any]]
+
+    # A literal value or {expression} to use as a request body when
+    # calling the target operation.
+    request_body: Optional[Any] = Field(None, alias='requestBody')
+
+    # A description of the link.
+    description: Optional[str]
+
+    # A server object to be used by the target operation.
+    server: Optional[ServerObject]
 
 
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
@@ -393,67 +535,17 @@ class MediaTypeObject(Schema):
     # or parameter.
     schema_field: Union[
         SchemaObject,
-        ReferenceSchema
+        ReferenceObject
     ] = Field(..., alias='schema')
 
     # Example of the media type.
     example: Optional[Any]
 
     # Examples of the media type.
-    examples: Optional[Dict[str, Union[ExampleObject, ReferenceSchema]]]
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
 
     # A map between a property name and its encoding information.
     encoding: Optional[Dict[str, EncodingObject]]
-
-
-class ResponseObject(Schema):
-    """Schema for a Response Object.
-
-    Describes a single response from an API Operation, including
-    design-time, static links to operations based on the response,
-    as described in https://swagger.io/specification/#response-object.
-    """
-
-    class Config:
-
-        arbitrary_types_allowed = True
-        use_enum_values = True
-
-    # A short description of the response.
-    description: str
-
-    # Maps a header name to its definition.
-    headers: Optional[Dict[str, Union[HeaderObject, ReferenceSchema]]]
-
-    # A map containing descriptions of potential response payloads.
-    # The key is a media type or media type range and the value
-    # describes it.
-    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
-
-    # A map of operations links that can be followed from the response.
-    links: Optional[Dict[str, Union[LinkObject, ReferenceSchema]]]
-
-
-class RequestBodyObject(Schema):
-    """Schema for a Request Body Object.
-
-    Describes a single request body, as described in
-    https://swagger.io/specification/#request-body-object.
-    """
-
-    class Config:
-
-        arbitrary_types_allowed = True
-        use_enum_values = True
-
-    # A brief description of the request body.
-    description: Optional[str]
-
-    # The content of the request body.
-    content: Dict[MediaType, MediaTypeObject]
-
-    # Determines if the request body is required in the request.
-    required: Optional[bool]
 
 
 class ParamLocation(str, Enum):
@@ -497,11 +589,76 @@ class ParameterObject(SchemaMapping[FieldSchemaT]):
     allow_empty_value: Optional[bool] = Field(None, alias='allowEmptyValue')
 
 
-# TODO SecurityReqObject
+class HeaderObject(ParameterObject):
+    """Schema for a Header Object.
+
+    Described in https://swagger.io/specification/#header-object.
+    """
+
+    # `name` MUST NOT be specified, it is given in the corresponding
+    # headers map.
+    name: Optional[str] = Field(None, const=True)
+
+    # `in` MUST NOT be specified, it is implicitly in header.
+    in_field: ParamLocation = Field(ParamLocation.HEADER,
+                                    const=True, alias='in')
+
+
+class ResponseObject(Schema):
+    """Schema for a Response Object.
+
+    Describes a single response from an API Operation, including
+    design-time, static links to operations based on the response,
+    as described in https://swagger.io/specification/#response-object.
+    """
+
+    class Config:
+
+        arbitrary_types_allowed = True
+        use_enum_values = True
+
+    # A short description of the response.
+    description: str
+
+    # Maps a header name to its definition.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
+
+    # A map containing descriptions of potential response payloads.
+    # The key is a media type or media type range and the value
+    # describes it.
+    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
+
+    # A map of operations links that can be followed from the response.
+    links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
+
+
+class RequestBodyObject(Schema):
+    """Schema for a Request Body Object.
+
+    Describes a single request body, as described in
+    https://swagger.io/specification/#request-body-object.
+    """
+
+    class Config:
+
+        arbitrary_types_allowed = True
+        use_enum_values = True
+
+    # A brief description of the request body.
+    description: Optional[str]
+
+    # The content of the request body.
+    content: Dict[MediaType, MediaTypeObject]
+
+    # Determines if the request body is required in the request.
+    required: Optional[bool]
+
+
 class SecurityReqObject(Schema):
     ...
 
 
+# TODO Callback Object
 class CallbackObject(Schema):
     ...
 
@@ -532,7 +689,7 @@ class OperationObject(Schema):
     operation_id: Optional[str] = Field(None, alias="operationId")
 
     # A list of parameters that are applicable for this operation.
-    parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
+    parameters: Optional[List[Union[ParameterObject, ReferenceObject]]]
 
     # The list of possible responses as they are returned from
     # executing this operation. This includes `default`.
@@ -540,12 +697,12 @@ class OperationObject(Schema):
 
     # The request body applicable for this operation.
     request_body: Optional[
-        Union[RequestBodyObject, ReferenceSchema]
+        Union[RequestBodyObject, ReferenceObject]
     ] = Field(None, alias="requestBody")
 
     # A map of possible out-of band callbacks related to the
     # parent operation.
-    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceSchema]]]
+    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
 
     # Declares this operation to be deprecated.
     deprecated: Optional[bool]
@@ -637,10 +794,10 @@ class PathItemObject(Schema):
 
     # A list of parameters that are applicable for all the
     # operations described under this path.
-    parameters: Optional[List[Union[ParameterObject, ReferenceSchema]]]
+    parameters: Optional[List[Union[ParameterObject, ReferenceObject]]]
 
 
-class PathObject(Schema):
+class PathsObject(Schema):
     """Schema for a Path Object.
 
     Holds the relative paths to the individual endpoints and
@@ -655,3 +812,58 @@ class PathObject(Schema):
     # A relative path to an individual endpoint.
     paths: Dict[str, PathItemObject]
 
+
+class TagObject(Schema):
+    """Schema for a Tag Object.
+
+    Adds metadata to a single tag that is used by the Operation Object.
+    Described in https://swagger.io/specification/#tag-object.
+    """
+
+    # The name of the tag.
+    name: str
+
+    # A short description for the tag.
+    description: Optional[str]
+
+    # Additional external documentation for this tag.
+    external_docs: Optional[ExternalDocObject] = Field(None,
+                                                       alias='externalDocs')
+
+
+class OpenApiObject(Schema):
+    """Schema for an OpenAPI Object.
+
+    This is the root document object of the OpenAPI document, as
+    described in https://swagger.io/specification/#openapi-object.
+    """
+
+    # This string MUST be the semantic version number of
+    # the OpenAPI Specification version that the OpenAPI
+    # document uses.
+    openapi: str
+
+    # Provides metadata about the API.
+    info: InfoObject
+
+    # An array of Server Objects, which provide connectivity
+    # information to a target server.
+    servers: Optional[List[ServerObject]]
+
+    # The available paths and operations for the API.
+    paths: PathsObject
+
+    # An element to hold various schemas for the specification.
+    components: Optional[ComponentsObject]
+
+    # A declaration of which security mechanisms can be used
+    # across the API.
+    security: Optional[List[SecurityReqObject]]
+
+    # A list of tags used by the specification with additional
+    # metadata.
+    tags: Optional[List[TagObject]]
+
+    # Additional external documentation.
+    external_docs: Optional[ExternalDocObject] = Field(None,
+                                                       alias='externalDocs')
