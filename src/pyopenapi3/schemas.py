@@ -10,7 +10,6 @@ from pydantic import (
     AnyUrl,
     EmailStr,
     validator,
-    ValidationError
 )
 from pydantic.generics import GenericModel
 
