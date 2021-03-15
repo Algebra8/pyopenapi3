@@ -555,7 +555,7 @@ class OperationObject(Schema):
     security: List[SecurityReqObject]
 
     # An alternative server array to service this operation.
-    servers: Optional[List[ServerSchema]]
+    servers: Optional[List[ServerObject]]
 
     # Taken from RFC7231:
     # https://tools.ietf.org/html/rfc7231#section-6
@@ -633,7 +633,7 @@ class PathItemObject(Schema):
 
     # An alternative server array to service all operations
     # in this path.
-    servers: Optional[List[ServerSchema]]
+    servers: Optional[List[ServerObject]]
 
     # A list of parameters that are applicable for all the
     # operations described under this path.
