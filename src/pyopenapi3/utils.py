@@ -9,9 +9,11 @@ from typing import (
     cast,
     Callable,
     Dict,
-    List
+    List,
+    Generator
 )
 from string import Formatter
+import inspect
 
 from .objects import (
     Number,
@@ -80,10 +82,14 @@ class _ObjectToDTSchema:
     # Objects
     Object = ReferenceObject
 
-    def __call__(self, cls: Type):
-        n = cls.__name__
+    def __call__(self, cls_or_name: Union[str, Type]) -> Type[DTSchema]:
+        if inspect.isclass(cls_or_name):
+            n = cls_or_name.__name__
+        else:
+            n = cls_or_name
         if hasattr(self, n):
             return getattr(self, n)
+        # TODO raise error?
 
 
 ObjectToDTSchema = _ObjectToDTSchema()
@@ -101,7 +107,7 @@ def format_description(s: Optional[str]) -> Optional[str]:
 
 
 def parse_name_and_type_from_fmt_str(
-        formatted_str) -> Tuple[Optional[str]]:
+        formatted_str) -> Generator[Tuple[str, Type[DTSchema]]]:
     """
     Parse a formatted string and return the names
     of the args and their types.
@@ -113,21 +119,12 @@ def parse_name_and_type_from_fmt_str(
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
-                yield arg_name, _get_field_from_name(_type_name)
+                yield arg_name, ObjectToDTSchema(_type_name)
             except AttributeError:
                 raise ValueError(
                     "A non-`Field` or `OpenApiObject` type was found. "
                     f"Can't use `{_type_name}` as a type in {formatted_str}."
                 ) from None
-
-
-def _get_field_from_name(name: Optional[str]) -> Optional[Type[Field]]:
-    """Get the Field type from a given name.
-
-    E.g. "Int64" -> <class 'pyopenapi3.fields.Int64'>
-    """
-    if name is not None:
-        return getattr(pyopenapi3.objects, name)
 
 
 def create_reference(name: str) -> ReferenceObject:
