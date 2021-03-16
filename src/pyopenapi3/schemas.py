@@ -142,7 +142,11 @@ class DTSchema(SchemaObject):
     ...
 
 
-class StringDTSchema(DTSchema):
+class PrimitiveDTSchema(DTSchema):
+    ...
+
+
+class StringDTSchema(PrimitiveDTSchema):
 
     type: str = Field("string", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -178,7 +182,7 @@ class EmailDTSchema(StringDTSchema):
     format: str = Field("email", const=True)
 
 
-class IntegerDTSchema(DTSchema):
+class IntegerDTSchema(PrimitiveDTSchema):
 
     type: str = Field("integer", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -194,7 +198,7 @@ class Int64DTSchema(IntegerDTSchema):
     format: str = Field("int64", const=True)
 
 
-class NumberDTSchema(DTSchema):
+class NumberDTSchema(PrimitiveDTSchema):
 
     type: str = Field("number", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -210,13 +214,13 @@ class DoubleDTSchema(NumberDTSchema):
     format: str = Field("double", const=True)
 
 
-class BoolDTSchema(DTSchema):
+class BoolDTSchema(PrimitiveDTSchema):
 
     type: str = Field('boolean', const=True)
     format: Optional[str] = Field(None, const=True)
 
 
-class ArrayDTSchema(SchemaObject):
+class ArrayDTSchema(DTSchema):
 
     type: str = Field("array", const=True)
     items: SchemaObject
@@ -237,7 +241,7 @@ class MixedTypeArrayDTSchema(ArrayDTSchema):
     items: _OneOf
 
 
-class ObjectsObject(SchemaObject):
+class ObjectsDTSchema(DTSchema):
 
     type: str = Field('object', const=True)
     properties: Dict[str, SchemaObject]
