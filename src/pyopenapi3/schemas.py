@@ -136,12 +136,12 @@ class SchemaObject(OpenApiJsonSchemaDef):
 
 
 # Data Types
-class _PrimitiveDTSchema(SchemaObject):
+class DTSchema(SchemaObject):
 
     ...
 
 
-class StringDTSchema(_PrimitiveDTSchema):
+class StringDTSchema(DTSchema):
 
     type: str = Field("string", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -172,7 +172,12 @@ class PasswordDTSchema(StringDTSchema):
     format: str = Field("password", const=True)
 
 
-class IntegerDTSchema(_PrimitiveDTSchema):
+class EmailDTSchema(StringDTSchema):
+
+    format: str = Field("email", const=True)
+
+
+class IntegerDTSchema(DTSchema):
 
     type: str = Field("integer", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -188,7 +193,7 @@ class Int64DTSchema(IntegerDTSchema):
     format: str = Field("int64", const=True)
 
 
-class NumberDTSchema(_PrimitiveDTSchema):
+class NumberDTSchema(DTSchema):
 
     type: str = Field("number", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -204,7 +209,7 @@ class DoubleDTSchema(NumberDTSchema):
     format: str = Field("double", const=True)
 
 
-class BoolDTSchema(_PrimitiveDTSchema):
+class BoolDTSchema(DTSchema):
 
     type: str = Field('boolean', const=True)
     format: Optional[str] = Field(None, const=True)
@@ -282,7 +287,7 @@ class ReferenceObject(Schema):
 
 
 FieldSchema = Union[
-    _PrimitiveDTSchema,
+    DTSchema,
     ArraySchema,
     ComponentsObject,
     ReferenceObject
@@ -451,7 +456,7 @@ SchemaT = TypeVar("SchemaT", bound=Schema)
 # TODO ComponentSchema is different from ReferenceSchema.
 FieldSchemaT = TypeVar(
     "FieldSchemaT",
-    _PrimitiveDTSchema, ArraySchema
+    DTSchema, ArraySchema
 )
 
 
