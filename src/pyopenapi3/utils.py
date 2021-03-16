@@ -143,7 +143,7 @@ def mark_component_and_attach_schema(obj, schema):
 
 def create_schema(
         __type: Type[OpenApiObject],
-        **kwargs
+        **kwargs: Any
 ) -> Schema:
     if issubclass(__type, Component):
         return convert_objects_to_schema(__type)
@@ -164,13 +164,14 @@ def convert_objects_to_schema(obj: Type[Component]) -> ReferenceObject:
 
 def convert_primitive_to_schema(
         primitive: Type[Primitive], **kwargs) -> PrimitiveDTSchema:
-    return ObjectToDTSchema(primitive)(**kwargs)
+    return cast(PrimitiveDTSchema, ObjectToDTSchema(primitive)(**kwargs))
 
 
-def convert_array_to_schema(array: Type[Array], **kwargs: Any):
-    schema = ObjectToDTSchema(array)
-    if schema is AnyTypeArrayDTSchema:
-        return schema(**kwargs)
+def convert_array_to_schema(
+        array: Type[Array], **kwargs: Any) -> ArrayDTSchema:
+    schema_type = cast(Type[ArrayDTSchema], ObjectToDTSchema(array))
+    if schema_type is AnyTypeArrayDTSchema:
+        return schema_type(**kwargs)
     else:
         sub_schemas = []
         for _type in array.tvars:
@@ -179,11 +180,11 @@ def convert_array_to_schema(array: Type[Array], **kwargs: Any):
                 continue
             sub_schemas.append(ObjectToDTSchema(_type)())
 
-        if schema is MixedTypeArrayDTSchema:
+        if schema_type is MixedTypeArrayDTSchema:
             items = {'oneOf': sub_schemas}
-            return schema(items=items, **kwargs)
+            return schema_type(items=items, **kwargs)
         else:
-            return schema(items=sub_schemas[0], **kwargs)
+            return schema_type(items=sub_schemas[0], **kwargs)
 
 
 def build_property_schema_from_func(
