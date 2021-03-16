@@ -40,7 +40,7 @@ class Double(Number):
     ...
 
 
-class Integer(Number):
+class Integer(Primitive):
     ...
 
 
