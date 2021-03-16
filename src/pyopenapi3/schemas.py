@@ -37,6 +37,7 @@ class JsonSchemaDef(Schema):
     Based on FastApi's OpenApi Models, SchemaBase.
     """
 
+    ref: Optional[ReferenceObject] = Field(None, alias="$ref")
     title: Optional[str]
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     maximum: Optional[float]
@@ -218,7 +219,7 @@ class BoolDTSchema(DTSchema):
 class ArrayDTSchema(SchemaObject):
 
     type: str = Field("array", const=True)
-    items: OpenApiJsonSchemaDef
+    items: SchemaObject
 
 
 class AnyTypeArrayDTSchema(ArrayDTSchema):
@@ -228,12 +229,23 @@ class AnyTypeArrayDTSchema(ArrayDTSchema):
 
 class _OneOf(SchemaObject):
 
-    one_of: List[OpenApiJsonSchemaDef] = Field(..., alias='oneOf')
+    one_of: List[SchemaObject] = Field(..., alias='oneOf')
 
 
 class MixedTypeArrayDTSchema(ArrayDTSchema):
 
     items: _OneOf
+
+
+class ObjectsObject(SchemaObject):
+
+    type: str = Field('object', const=True)
+    properties: Dict[str, SchemaObject]
+
+
+class ReferenceObject(SchemaObject):
+
+    ref: str = Field(..., alias="$ref")
 
 
 class SecuritySchemeObject(Schema):
@@ -281,11 +293,6 @@ class ComponentsObject(Schema):
 
     # An object to hold reusable Callback Objects.
     callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
-
-
-class ReferenceObject(Schema):
-
-    ref: str = Field(..., alias="$ref")
 
 
 FieldSchema = Union[

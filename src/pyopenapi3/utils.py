@@ -75,6 +75,9 @@ class _ObjectToDTSchema:
     MixedTypeArray = MixedTypeArrayDTSchema
     AnyTypeArray = AnyTypeArrayDTSchema
 
+    # Objects
+    Object = ReferenceObject
+
     def __call__(self, cls: Type):
         n = cls.__name__
         if hasattr(self, n):
@@ -250,6 +253,9 @@ def convert_array_to_schema(array: Type[Array], **kwargs: Any):
     else:
         sub_schemas = []
         for _type in array.tvars:
+            if issubclass(_type, Component):
+                sub_schemas.append(create_reference(_type.__name__))
+                continue
             sub_schemas.append(ObjectToDTSchema(_type)())
 
         if schema is MixedTypeArrayDTSchema:
