@@ -221,17 +221,19 @@ class ArrayDTSchema(SchemaObject):
     items: OpenApiJsonSchemaDef
 
 
-class ArraySchema(Schema):
+class AnyTypeArrayDTSchema(ArrayDTSchema):
 
-    class Config:
+    items: Dict = Field({}, const=True)
 
-        arbitrary_types_allowed = True
 
-    type: str
-    items: Dict[
-        str,
-        Union[str, Dict[str, Schema], List[Schema]]
-    ]
+class _OneOf(SchemaObject):
+
+    one_of: List[OpenApiJsonSchemaDef] = Field(..., alias='oneOf')
+
+
+class MixedTypeArrayDTSchema(ArrayDTSchema):
+
+    items: _OneOf
 
 
 class SecuritySchemeObject(Schema):
@@ -288,7 +290,7 @@ class ReferenceObject(Schema):
 
 FieldSchema = Union[
     DTSchema,
-    ArraySchema,
+    ArrayDTSchema,
     ComponentsObject,
     ReferenceObject
 ]
@@ -456,7 +458,7 @@ SchemaT = TypeVar("SchemaT", bound=Schema)
 # TODO ComponentSchema is different from ReferenceSchema.
 FieldSchemaT = TypeVar(
     "FieldSchemaT",
-    DTSchema, ArraySchema
+    DTSchema, ArrayDTSchema
 )
 
 

@@ -33,14 +33,15 @@ from .schemas import (
     Int64DTSchema, NumberDTSchema, FloatDTSchema, DoubleDTSchema,
     EmailDTSchema,
     BoolDTSchema, ArrayDTSchema,
-    ArraySchema,
     ComponentsObject,
     ReferenceObject,
     DTSchema,
     Schema,
     FieldSchemaT,
     SchemaMapping,
-    MediaType
+    MediaType,
+    AnyTypeArrayDTSchema,
+    MixedTypeArrayDTSchema
 )
 
 
@@ -68,6 +69,11 @@ class _ObjectToDTSchema:
 
     # Bool
     Boolean = BoolDTSchema
+
+    # Arrays
+    SingleArray = ArrayDTSchema
+    MixedTypeArray = MixedTypeArrayDTSchema
+    AnyTypeArray = AnyTypeArrayDTSchema
 
     def __call__(self, cls: Type):
         n = cls.__name__
@@ -209,7 +215,7 @@ def _convert_component_to_schema(
                 DTSchema,
                 ComponentsObject,
                 ReferenceObject,
-                ArraySchema
+                ArrayDTSchema
             ] = getattr(attr, OPENAPI_DEF)
             # Don't need to `.dict()` these because
             # top-level `.dict()` called on `schema`
@@ -237,9 +243,25 @@ def convert_primitive_to_schema(
     return schema
 
 
-def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
+def convert_array_to_schema(array: Type[Array], **kwargs: Any):
+    schema = ObjectToDTSchema(array)
+    if schema is AnyTypeArrayDTSchema:
+        return schema(**kwargs)
+    else:
+        sub_schemas = []
+        for _type in array.tvars:
+            sub_schemas.append(ObjectToDTSchema(_type)())
+
+        if schema is MixedTypeArrayDTSchema:
+            items = {'oneOf': sub_schemas}
+            return schema(items=items, **kwargs)
+        else:
+            return schema(items=sub_schemas[0], **kwargs)
+
+
+def _convert_array_to_schema(array: Type[Array]) -> ArrayDTSchema:
     """Convert a concrete array type to an ArraySchema."""
-    schema = ArraySchema(type='array', items={})
+    schema = ArrayDTSchema()
 
     # The types contained in the Array:
     # Array[int, str] -> tvars = (int, str)
@@ -252,7 +274,8 @@ def convert_array_to_schema(array: Type[Array]) -> ArraySchema:
         # The array only holds one type: could be
         # a specific schema or arbitrary types (aka ...).
         if is_arb_type(tvars[0]):
-            return schema
+            return ArrayDTSchema()
+
         schema.items = create_schema(
             cast(Type[OpenApiObject], tvars[0]),
             # In case it is a custom object,
@@ -336,7 +359,7 @@ def map_field_to_schema(
     if issubclass(field_type, Primitive):
         return DTSchema
     elif issubclass(field_type, Array):
-        return ArraySchema
+        return ArrayDTSchema
     elif issubclass(field_type, Component):
         if is_reference:
             return ReferenceObject
