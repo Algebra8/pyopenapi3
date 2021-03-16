@@ -31,14 +31,189 @@ class Schema(BaseModel):
         )
 
 
-# Field Schemas
-class PrimitiveSchema(Schema):
+class JsonSchemaDef(Schema):
+    """Subset of JSON Schema Specification Wright Draft 00.
 
-    type: str
-    format: Optional[str]
+    Based on FastApi's OpenApi Models, SchemaBase.
+    """
+
+    title: Optional[str]
+    multiple_of: Optional[float] = Field(None, alias='multipleOf')
+    maximum: Optional[float]
+    exclusive_maximum: Optional[float] = Field(None, alias='exclusiveMaximum')
+    minimum: Optional[float]
+    exclusive_minimum: Optional[float] = Field(None, alias='exclusiveMinimum')
+    max_length: Optional[int] = Field(None, alias='maxLength', gte=0)
+    min_length: Optional[int] = Field(None, alias='minLength', gte=0)
+    pattern: Optional[str]
+    max_items: Optional[int] = Field(None, alias='maxItems', gte=0)
+    min_items: Optional[int] = Field(None, alias='minItems', gte=0)
+    unique_items: Optional[bool] = Field(None, alias='uniqueItems')
+    max_properties: Optional[int] = Field(None, alias='maxProperties', gte=0)
+    min_properties: Optional[int] = Field(None, alias='minProperties', gte=0)
+    required: Optional[List[str]]
+    enum: Optional[List[Any]]
+
+
+class OpenApiJsonSchemaDef(JsonSchemaDef):
+    """
+    Properties from JSON Schema definition with adjusted definitions
+    for OpenAPI Specification.
+
+    Based on FastApi's OpenApi Models, SchemaBase.
+    """
+
+    type: Optional[str]
+    all_of: Optional[List[Any]] = Field(None, alias='allOf')
+    one_of: Optional[List[Any]] = Field(None, alias='oneOf')
+    any_of: Optional[List[Any]] = Field(None, alias='anyOf')
+    not_: Optional[Any] = Field(None, alias="not")
+    items: Optional[Any]
+    properties: Optional[Dict[str, Any]]
+    additional_properties: Optional[
+        Union[Dict[str, Any], bool]
+    ] = Field(None, alias='additionalProperties')
     description: Optional[str]
-    readOnly: Optional[bool]
+    format: Optional[str]
+    default: Optional[Any]
+
+
+class SchemaObject(OpenApiJsonSchemaDef):
+    """Schema for a Schema Object.
+
+    The Schema Object allows the definition of input and output data
+    types, as described in https://swagger.io/specification/#schema-object.
+
+    These types can be objects, but also primitives and arrays.
+    """
+
+    # A true value adds "null" to the allowed type specified
+    # by the type keyword, only if type is explicitly defined
+    # within the same Schema Object.
+    nullable: Optional[bool]
+
+    # Adds support for polymorphism.
+    discriminator: Optional[DiscriminatorObject]
+
+    # Relevant only for Schema "properties" definitions.
+    # Declares the property as "read only".
+    read_only: Optional[bool] = Field(None, alias='readOnly')
+
+    # Relevant only for Schema "properties" definitions.
+    # Declares the property as "write only".
+    write_only: Optional[bool] = Field(None, alias='writeOnly')
+
+    # Adds additional metadata to describe the XML representation
+    # of this property.
+    xml: Optional[XMLObject]
+
+    # Additional external documentation for this schema.
+    external_docs: Optional[
+        ExternalDocObject
+    ] = Field(None, alias='externalDocs')
+
+    # A free-form property to include an example of an instance
+    # for this schema.
     example: Optional[Any]
+
+    # Specifies that a schema is deprecated and SHOULD be
+    # transitioned out of usage.
+    deprecated: Optional[bool]
+
+    # The next few properties are taken from FastApi.Models.Schema:
+    # The idea is to allow recursive properties for the given fields.
+    # So, we overwrite some of the previous OpenApiJsonSchemaDef to
+    # include self type references.
+    all_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='allOf')
+    one_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='oneOf')
+    any_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='anyOf')
+    not_: Optional[OpenApiJsonSchemaDef] = Field(None, alias="not")
+    items: Optional[OpenApiJsonSchemaDef]
+    properties: Optional[Dict[str, OpenApiJsonSchemaDef]]
+    additional_properties: Optional[
+        Union[Dict[str, OpenApiJsonSchemaDef], bool]
+    ] = Field(None, alias='additionalProperties')
+
+
+# Data Types
+class _PrimitiveDTSchema(SchemaObject):
+
+    ...
+
+
+class StringDTSchema(_PrimitiveDTSchema):
+
+    type: str = Field("string", const=True)
+    format: Optional[str] = Field(None, const=True)
+
+
+class ByteDTSchema(StringDTSchema):
+
+    format: str = Field("byte", const=True)
+
+
+class BinaryDTSchema(StringDTSchema):
+
+    format: str = Field("binary", const=True)
+
+
+class DateDTSchema(StringDTSchema):
+
+    format: str = Field("data", const=True)
+
+
+class DateTimeDTSchema(StringDTSchema):
+
+    format: str = Field("date-time", const=True)
+
+
+class PasswordDTSchema(StringDTSchema):
+
+    format: str = Field("password", const=True)
+
+
+class IntegerDTSchema(_PrimitiveDTSchema):
+
+    type: str = Field("integer", const=True)
+    format: Optional[str] = Field(None, const=True)
+
+
+class Int32DTSchema(IntegerDTSchema):
+
+    format: str = Field("int32", const=True)
+
+
+class Int64DTSchema(IntegerDTSchema):
+
+    format: str = Field("int64", const=True)
+
+
+class NumberDTSchema(_PrimitiveDTSchema):
+
+    type: str = Field("number", const=True)
+    format: Optional[str] = Field(None, const=True)
+
+
+class FloatDTSchema(NumberDTSchema):
+
+    format: str = Field("float", const=True)
+
+
+class DoubleDTSchema(NumberDTSchema):
+
+    format: str = Field("double", const=True)
+
+
+class BoolDTSchema(_PrimitiveDTSchema):
+
+    type: str = Field('boolean', const=True)
+    format: Optional[str] = Field(None, const=True)
+
+
+class ArrayDTSchema(SchemaObject):
+
+    type: str = Field("array", const=True)
+    items: OpenApiJsonSchemaDef
 
 
 class ArraySchema(Schema):
@@ -107,7 +282,7 @@ class ReferenceObject(Schema):
 
 
 FieldSchema = Union[
-    PrimitiveSchema,
+    _PrimitiveDTSchema,
     ArraySchema,
     ComponentsObject,
     ReferenceObject
@@ -276,7 +451,7 @@ SchemaT = TypeVar("SchemaT", bound=Schema)
 # TODO ComponentSchema is different from ReferenceSchema.
 FieldSchemaT = TypeVar(
     "FieldSchemaT",
-    PrimitiveSchema, ArraySchema
+    _PrimitiveDTSchema, ArraySchema
 )
 
 
@@ -416,110 +591,6 @@ class LinkObject(Schema):
 class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
 
     schema_field: SchemaT = Field(..., alias='schema')
-
-
-class JsonSchemaDef(Schema):
-    """Subset of JSON Schema Specification Wright Draft 00.
-
-    Based on FastApi's OpenApi Models, SchemaBase.
-    """
-
-    title: Optional[str]
-    multiple_of: Optional[float] = Field(None, alias='multipleOf')
-    maximum: Optional[float]
-    exclusive_maximum: Optional[float] = Field(None, alias='exclusiveMaximum')
-    minimum: Optional[float]
-    exclusive_minimum: Optional[float] = Field(None, alias='exclusiveMinimum')
-    max_length: Optional[int] = Field(None, alias='maxLength', gte=0)
-    min_length: Optional[int] = Field(None, alias='minLength', gte=0)
-    pattern: Optional[str]
-    max_items: Optional[int] = Field(None, alias='maxItems', gte=0)
-    min_items: Optional[int] = Field(None, alias='minItems', gte=0)
-    unique_items: Optional[bool] = Field(None, alias='uniqueItems')
-    max_properties: Optional[int] = Field(None, alias='maxProperties', gte=0)
-    min_properties: Optional[int] = Field(None, alias='minProperties', gte=0)
-    required: Optional[List[str]]
-    enum: Optional[List[Any]]
-
-
-class OpenApiJsonSchemaDef(JsonSchemaDef):
-    """
-    Properties from JSON Schema definition with adjusted definitions
-    for OpenAPI Specification.
-
-    Based on FastApi's OpenApi Models, SchemaBase.
-    """
-
-    type: Optional[str]
-    all_of: Optional[List[Any]] = Field(None, alias='allOf')
-    one_of: Optional[List[Any]] = Field(None, alias='oneOf')
-    any_of: Optional[List[Any]] = Field(None, alias='anyOf')
-    not_: Optional[Any] = Field(None, alias="not")
-    items: Optional[Any]
-    properties: Optional[Dict[str, Any]]
-    additional_properties: Optional[
-        Union[Dict[str, Any], bool]
-    ] = Field(None, alias='additionalProperties')
-    description: Optional[str]
-    format: Optional[str]
-    default: Optional[Any]
-
-
-class SchemaObject(OpenApiJsonSchemaDef):
-    """Schema for a Schema Object.
-
-    The Schema Object allows the definition of input and output data
-    types, as described in https://swagger.io/specification/#schema-object.
-
-    These types can be objects, but also primitives and arrays.
-    """
-
-    # A true value adds "null" to the allowed type specified
-    # by the type keyword, only if type is explicitly defined
-    # within the same Schema Object.
-    nullable: Optional[bool]
-
-    # Adds support for polymorphism.
-    discriminator: Optional[DiscriminatorObject]
-
-    # Relevant only for Schema "properties" definitions.
-    # Declares the property as "read only".
-    read_only: Optional[bool] = Field(None, alias='readOnly')
-
-    # Relevant only for Schema "properties" definitions.
-    # Declares the property as "write only".
-    write_only: Optional[bool] = Field(None, alias='writeOnly')
-
-    # Adds additional metadata to describe the XML representation
-    # of this property.
-    xml: Optional[XMLObject]
-
-    # Additional external documentation for this schema.
-    external_docs: Optional[
-        ExternalDocObject
-    ] = Field(None, alias='externalDocs')
-
-    # A free-form property to include an example of an instance
-    # for this schema.
-    example: Optional[Any]
-
-    # Specifies that a schema is deprecated and SHOULD be
-    # transitioned out of usage.
-    deprecated: Optional[bool]
-
-    # The next few properties are taken from FastApi.Models.Schema:
-    # The idea is to allow recursive properties for the given fields.
-    # So, we overwrite some of the previous OpenApiJsonSchemaDef to
-    # include self type references.
-    all_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='allOf')
-    one_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='oneOf')
-    any_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='anyOf')
-    not_: Optional[OpenApiJsonSchemaDef] = Field(None, alias="not")
-    items: Optional[OpenApiJsonSchemaDef]
-    properties: Optional[Dict[str, OpenApiJsonSchemaDef]]
-    additional_properties: Optional[
-        Union[Dict[str, OpenApiJsonSchemaDef], bool]
-    ] = Field(None, alias='additionalProperties')
 
 
 class MediaTypeObject(Schema):
