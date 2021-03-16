@@ -1,5 +1,6 @@
 from typing import Pattern
 import re
+from enum import Enum
 
 from pydantic import AnyUrl
 from pydantic.errors import UrlExtraError
@@ -80,3 +81,16 @@ class VariableAnyUrl(str):
             query=parts['query'],
             fragment=parts['fragment'],
         )
+
+
+# Constants for media type str definitions.
+class MediaTypeEnum(str, Enum):
+
+    JSON = "application/json"
+    XML = "application/xml"
+    PDF = "application/pdf"
+    URL_ENCODED = "application/x-www-form-urlencoded"
+    MULTIPART = "multipart/form-data"
+    PLAIN = "text/plain; charset=utf-8"
+    HTML = "text/html"
+    PNG = "image/png"

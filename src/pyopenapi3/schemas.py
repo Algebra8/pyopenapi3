@@ -13,7 +13,7 @@ from pydantic import (
 )
 from pydantic.generics import GenericModel
 
-from .types import VariableAnyUrl
+from .types import VariableAnyUrl, MediaTypeEnum
 
 
 class Schema(BaseModel):
@@ -453,18 +453,6 @@ class ServerObject(Schema):
 
 
 # Path schemas
-class MediaType(str, Enum):
-
-    JSON = "application/json"
-    XML = "application/xml"
-    PDF = "application/pdf"
-    URL_ENCODED = "application/x-www-form-urlencoded"
-    MULTIPART = "multipart/form-data"
-    PLAIN = "text/plain; charset=utf-8"
-    HTML = "text/html"
-    PNG = "image/png"
-
-
 SchemaT = TypeVar("SchemaT", bound=Schema)
 # TODO ComponentSchema is different from ReferenceSchema.
 FieldSchemaT = TypeVar(
@@ -714,7 +702,7 @@ class ResponseObject(Schema):
     # A map containing descriptions of potential response payloads.
     # The key is a media type or media type range and the value
     # describes it.
-    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
+    content: Optional[Dict[MediaTypeEnum, MediaTypeObject]]
 
     # A map of operations links that can be followed from the response.
     links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
@@ -736,7 +724,7 @@ class RequestBodyObject(Schema):
     description: Optional[str]
 
     # The content of the request body.
-    content: Dict[MediaType, MediaTypeObject]
+    content: Dict[MediaTypeEnum, MediaTypeObject]
 
     # Determines if the request body is required in the request.
     required: Optional[bool]
