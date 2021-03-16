@@ -26,7 +26,7 @@ from .objects import (
     Primitive,
     Component,
     OpenApiObject, Email, Float, Double, Int32, Int64,
-    Date, DateTime, Byte, Binary, Password
+    Date, DateTime, Byte, Binary, Password, MediaType
 )
 import pyopenapi3.objects  # Used to get a class from a name.
 from .schemas import (
@@ -43,9 +43,10 @@ from .schemas import (
     Schema,
     FieldSchemaT,
     SchemaMapping,
-    MediaType,
+    MediaTypeEnum,
     AnyTypeArrayDTSchema,
-    MixedTypeArrayDTSchema
+    MixedTypeArrayDTSchema,
+    MediaTypeObject
 )
 
 
@@ -242,42 +243,23 @@ def inject_component(cls):
         return injected
 
 
-def map_field_to_schema(
-        field_type, is_reference: bool = False) -> Type[FieldSchemaT]:
-    if issubclass(field_type, Primitive):
-        return DTSchema
-    elif issubclass(field_type, Array):
-        return ArrayDTSchema
-    elif issubclass(field_type, Component):
-        if is_reference:
-            return ReferenceObject
-        return ComponentsObject
-    else:
-        raise ValueError(
-            "Must provide a `Field` or custom component."
-        )
+ContentSchema = Optional[Dict[MediaTypeEnum, MediaTypeObject]]
 
 
-ContentSchema = Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
-
-
-def build_content_schema_from_content(
-        content: List[Tuple[str, Any]]) -> ContentSchema:
+def build_mediatype_schema_from_content(
+        content: Optional[List[Union[MediaType, Tuple[Any]]]]
+) -> ContentSchema:
     if content is None:
         return
     content_schema = {}
-    for media_type, field_type in content:
-        field_schema_tp = map_field_to_schema(
-            field_type, is_reference=True
+    for media_type, field_type, example, examples, encoding in content:
+        # Note, only bare-bones or references allowed, such as
+        # Int64, Array[~], ref->Objects.
+        schema = create_schema(field_type)  # validated schema
+        media_type = MediaTypeEnum(media_type)
+        content_schema[media_type] = MediaTypeObject(
+            schema=schema, example=example, examples=examples,
+            encoding=encoding
         )
-        media_type = cast(MediaType, media_type)
-        schema = cast(
-            Type[FieldSchemaT],
-            create_schema(field_type, is_reference=True)
-        )
-        content_schema[media_type] = \
-            SchemaMapping[field_schema_tp](schema=schema)
 
     return content_schema
-
-
