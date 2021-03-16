@@ -93,7 +93,7 @@ class SchemaObject(OpenApiJsonSchemaDef):
     nullable: Optional[bool]
 
     # Adds support for polymorphism.
-    discriminator: Optional[DiscriminatorObject]
+    discriminator: Optional[DiscriminatorObject] = None
 
     # Relevant only for Schema "properties" definitions.
     # Declares the property as "read only".
@@ -105,7 +105,7 @@ class SchemaObject(OpenApiJsonSchemaDef):
 
     # Adds additional metadata to describe the XML representation
     # of this property.
-    xml: Optional[XMLObject]
+    xml: Optional[XMLObject] = None
 
     # Additional external documentation for this schema.
     external_docs: Optional[

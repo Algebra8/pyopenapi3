@@ -206,7 +206,7 @@ def _convert_component_to_schema(
     for attr in component.__dict__.values():
         if hasattr(attr, OPENAPI_DEF):
             property_schema: Union[
-                _PrimitiveDTSchema,
+                DTSchema,
                 ComponentsObject,
                 ReferenceObject,
                 ArraySchema
@@ -223,8 +223,8 @@ def convert_primitive_to_schema(
         description: Optional[str],
         read_only: bool,
         example: Optional[Any]
-) -> _PrimitiveDTSchema:
-    schema = _PrimitiveDTSchema(**parse_attr(primitive))
+) -> DTSchema:
+    schema = DTSchema(**parse_attr(primitive))
     if description is not None:
         schema.description = description
     if read_only:
@@ -334,7 +334,7 @@ def inject_component(cls):
 def map_field_to_schema(
         field_type, is_reference: bool = False) -> Type[FieldSchemaT]:
     if issubclass(field_type, Primitive):
-        return _PrimitiveDTSchema
+        return DTSchema
     elif issubclass(field_type, Array):
         return ArraySchema
     elif issubclass(field_type, Component):
