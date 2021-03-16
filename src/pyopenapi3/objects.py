@@ -24,6 +24,27 @@ class String(Primitive):
     ...
 
 
+class Byte(String):
+
+    ...
+
+
+class Date(String):
+    ...
+
+
+class Binary(String):
+    ...
+
+
+class DateTime(String):
+    ...
+
+
+class Password(String):
+    ...
+
+
 class Email(String):
     ...
 
@@ -40,7 +61,7 @@ class Double(Number):
     ...
 
 
-class Integer(Number):
+class Integer(Primitive):
     ...
 
 

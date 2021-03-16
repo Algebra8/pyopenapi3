@@ -23,14 +23,20 @@ from .objects import (
     is_arb_type,
     Primitive,
     Component,
-    OpenApiObject
+    OpenApiObject, Email, Float, Double, Int32, Int64,
+    Date, DateTime, Byte, Binary, Password
 )
 import pyopenapi3.objects  # Used to get a class from a name.
 from .schemas import (
+    StringDTSchema, ByteDTSchema, BinaryDTSchema, DateDTSchema,
+    DateTimeDTSchema, PasswordDTSchema, IntegerDTSchema, Int32DTSchema,
+    Int64DTSchema, NumberDTSchema, FloatDTSchema, DoubleDTSchema,
+    EmailDTSchema,
+    BoolDTSchema, ArrayDTSchema,
     ArraySchema,
-    ComponentSchema,
-    ReferenceSchema,
-    PrimitiveSchema,
+    ComponentsObject,
+    ReferenceObject,
+    DTSchema,
     Schema,
     FieldSchemaT,
     SchemaMapping,
@@ -39,6 +45,37 @@ from .schemas import (
 
 
 OPENAPI_DEF = '__OPENAPIDEF__FIELD_OR_COMPONENT__'
+
+
+class _ObjectToDTSchema:
+
+    # Strings
+    String = StringDTSchema
+    Byte = ByteDTSchema
+    Binary = BinaryDTSchema
+    Date = DateDTSchema
+    DateTime = DateTimeDTSchema
+    Password = PasswordDTSchema
+    Email = EmailDTSchema
+
+    # Numbers
+    Number = NumberDTSchema
+    Float = FloatDTSchema
+    Double = DoubleDTSchema
+    Integer = IntegerDTSchema
+    Int32 = Int32DTSchema
+    Int64 = Int64DTSchema
+
+    # Bool
+    Boolean = BoolDTSchema
+
+    def __call__(self, cls: Type):
+        n = cls.__name__
+        if hasattr(self, n):
+            return getattr(self, n)
+
+
+ObjectToDTSchema = _ObjectToDTSchema()
 
 
 # Helper for formating descriptions.
@@ -111,8 +148,8 @@ def parse_numbers(n):
         return {'type': 'integer', 'format': n.__name__.lower()}
 
 
-def create_reference(name: str) -> ReferenceSchema:
-    return ReferenceSchema(ref=f"#/components/schemas/{name}")
+def create_reference(name: str) -> ReferenceObject:
+    return ReferenceObject(ref=f"#/components/schemas/{name}")
 
 
 def mark_component_and_attach_schema(obj, schema):
@@ -152,7 +189,7 @@ def convert_component_to_schema(
         component: Type[Component],
         description: Optional[str],
         is_reference: bool
-) -> Union[ComponentSchema, ReferenceSchema]:
+) -> Union[ComponentsObject, ReferenceObject]:
     assert is_reference is not None
     if is_reference:
         return create_reference(component.__name__)
@@ -163,15 +200,15 @@ def convert_component_to_schema(
 def _convert_component_to_schema(
         component: Type[Component],
         description: Optional[str]
-) -> ComponentSchema:
+) -> ComponentsObject:
     """Convert non-reference Component object."""
-    schema = ComponentSchema(description=description)
+    schema = ComponentsObject(description=description)
     for attr in component.__dict__.values():
         if hasattr(attr, OPENAPI_DEF):
             property_schema: Union[
-                PrimitiveSchema,
-                ComponentSchema,
-                ReferenceSchema,
+                DTSchema,
+                ComponentsObject,
+                ReferenceObject,
                 ArraySchema
             ] = getattr(attr, OPENAPI_DEF)
             # Don't need to `.dict()` these because
@@ -186,8 +223,8 @@ def convert_primitive_to_schema(
         description: Optional[str],
         read_only: bool,
         example: Optional[Any]
-) -> PrimitiveSchema:
-    schema = PrimitiveSchema(**parse_attr(primitive))
+) -> DTSchema:
+    schema = DTSchema(**parse_attr(primitive))
     if description is not None:
         schema.description = description
     if read_only:
@@ -297,13 +334,13 @@ def inject_component(cls):
 def map_field_to_schema(
         field_type, is_reference: bool = False) -> Type[FieldSchemaT]:
     if issubclass(field_type, Primitive):
-        return PrimitiveSchema
+        return DTSchema
     elif issubclass(field_type, Array):
         return ArraySchema
     elif issubclass(field_type, Component):
         if is_reference:
-            return ReferenceSchema
-        return ComponentSchema
+            return ReferenceObject
+        return ComponentsObject
     else:
         raise ValueError(
             "Must provide a `Field` or custom component."
