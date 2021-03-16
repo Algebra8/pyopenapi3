@@ -73,9 +73,10 @@ class Int64(Integer):
     ...
 
 
-# Array
-class ArbitraryArray:
-    ...
+# namespaces
+SingleArray = "SingleArray"
+MixedTypeArray = "MixedTypeArray"
+AnyTypeArray = "AnyTypeArray"
 
 
 class Array(Field, Iterable):
@@ -99,29 +100,24 @@ class Array(Field, Iterable):
         return f"Array{self.tvars}"
 
     def __class_getitem__(cls, parameters):
-        args: Any
-
         if parameters == Ellipsis:
-            # Arbitrary types
-            args = (ArbitraryArray,)
+            args = ()
+            _cls = type(AnyTypeArray, (Array,), {'tvars': args})
+            s = '...'
         elif not isinstance(parameters, tuple):
-            # Single type, e.g. [1, 2, 3] aka [int].
-            # Still put in tuple for uniform interface.
             args = (parameters,)
+            _cls = type(SingleArray, (Array,), {'tvars': args})
+            s = parameters.__name__
         elif isinstance(parameters, tuple):
-            # Mixed-type array, e.g. ["foo", 5, -2, "bar"]
             args = parameters
+            _cls = type(MixedTypeArray, (Array,), {'tvars': args})
+            s = ", ".join([_type.__name__ for _type in args])
         else:
-            raise ValueError("Do things right.")
+            raise ValueError()
 
-        @functools.wraps(cls, updated=())
-        class ConcreteArray(Array):
-            tvars = args
+        _cls.__qualname__ = f"{cls.__qualname__}[{s}]"
 
-        q = ", ".join([_type.__name__ for _type in args])
-        ConcreteArray.__qualname__ = f"{cls.__qualname__}[{q}]"
-
-        return ConcreteArray
+        return _cls
 
     def __iter__(self):
         return iter(self.tvars)
@@ -134,7 +130,7 @@ class Array(Field, Iterable):
 
 
 def is_arb_type(__type) -> bool:
-    return __type is ArbitraryArray
+    return __type.__name__ == AnyTypeArray
 
 
 # Components (Custom defined objects)
