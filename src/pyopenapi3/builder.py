@@ -13,21 +13,19 @@ from .utils import (
     create_schema,
     inject_component,
     format_description,
-    map_field_to_schema,
-    build_content_schema_from_content
+    build_mediatype_schema_from_content
 )
 
 from .objects import Field, Component, RequestBody, Response
 from .schemas import (
-    InfoSchema,
-    ServerSchema,
-    ResponseSchema,
-    RequestBodySchema,
     ParameterObject,
-    PathObject,
     OperationObject,
-    SchemaMapping,
     PathItemObject,
+    InfoObject,
+    ServerObject,
+    RequestBodyObject,
+    ResponseObject,
+    PathsObject
 )
 from ._yaml import make_yaml_ordered
 
@@ -112,11 +110,11 @@ class InfoBuilder:
     Provides metadata about the API.
     """
 
-    _schema = InfoSchema
-    _field_keys = InfoSchema.__fields__.keys()
+    _schema = InfoObject
+    _field_keys = InfoObject.__fields__.keys()
 
     def __init__(self):
-        self.builds = None  # type: InfoSchema
+        self.builds = None  # type: InfoObject
 
     def __call__(self, cls):
         try:
@@ -166,15 +164,15 @@ class ServerBuilder:
     #
     # So, once we pull out the `ServerSchema`'s attrs, pydantic
     # should do all the heavy lifting.
-    _schema = ServerSchema
-    _field_keys = ServerSchema.__fields__.keys()
+    _schema = ServerObject
+    _field_keys = ServerObject.__fields__.keys()
 
     def __init__(self):
         # The servers section can contain one or more Server objects.
-        self._builds: List[ServerSchema] = []
+        self._builds: List[ServerObject] = []
 
     @property
-    def builds(self) -> List[ServerSchema]:
+    def builds(self) -> List[ServerObject]:
         if not self._builds:
             # servers have not been provided, a default
             # server with a url value of '/' will be provided.
@@ -272,7 +270,7 @@ class RequestBodyBuilder:
             self,
             method_name: str,
             request_body: Union[Dict[str, Any], RequestBody]
-    ) -> Optional[RequestBodySchema]:
+    ) -> Optional[RequestBodyObject]:
         if request_body is Ellipsis:
             return
 
@@ -288,10 +286,10 @@ class RequestBodyBuilder:
                 f"in the request body for {method_name}"
             )
 
-        content = build_content_schema_from_content(request_body['content'])
+        content = build_mediatype_schema_from_content(request_body['content'])
 
         try:
-            request_body_schema = RequestBodySchema(
+            request_body_schema = RequestBodyObject(
                 description=request_body.get('description'),
                 required=request_body.get('required'),
                 content=content
@@ -317,14 +315,14 @@ class ResponseBuilder:
     @staticmethod
     def build_from_response(
             response: Union[Dict[str, Any], Response]
-    ) -> Dict[str, ResponseSchema]:
+    ) -> Dict[str, ResponseObject]:
         if isinstance(response, Response):
             response = response.as_dict()
 
-        content = build_content_schema_from_content(response.get('content'))
+        content = build_mediatype_schema_from_content(response.get('content'))
 
         try:
-            response_schema = ResponseSchema(
+            response_schema = ResponseObject(
                 # description is a required field.
                 description=response['description'],
                 content=(content or None),
@@ -339,7 +337,7 @@ class ResponseBuilder:
             self,
             method_name: str,
             responses: List[Union[Dict[str, Any], Response]]
-    ) -> Optional[Dict[str, ResponseSchema]]:
+    ) -> Optional[Dict[str, ResponseObject]]:
         response_schemas_per_method = {}
         for response in responses:
             response_schemas_per_method.update(
@@ -416,7 +414,7 @@ class PathBuilder:
         self._response_schemas = None
         self._meta_info = None
 
-        self.builds = None  # type: PathMappingSchema
+        self.builds = None  # type: PathsObject
 
     def update_params(self, e: Event):
         method, data = e.method, e.data
@@ -524,7 +522,7 @@ class PathBuilder:
 
         if self.builds is None:
             try:
-                self.builds = PathObject(
+                self.builds = PathsObject(
                     paths={path: http_mapping_schema}
                 )
             except ValidationError as e:
