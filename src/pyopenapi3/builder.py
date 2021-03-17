@@ -12,7 +12,7 @@ from .utils import (
     parse_name_and_type_from_fmt_str,
     create_schema,
     inject_component,
-    _format_description,
+    format_description,
     map_field_to_schema,
     build_content_schema_from_content
 )
@@ -497,7 +497,7 @@ class PathBuilder:
                     tags=meta_info.get('tags'),
                     summary=meta_info.get('summary'),
                     operation_id=meta_info.get('operation_id'),
-                    description=_format_description(method.__doc__),
+                    description=format_description(method.__doc__),
                     # Params are validated separately.
                     parameters=(params_for_method or None),
                     responses=responses_for_method,

@@ -13,7 +13,7 @@ from pydantic import (
 )
 from pydantic.generics import GenericModel
 
-from .types import VariableAnyUrl
+from .types import VariableAnyUrl, MediaTypeEnum
 
 
 class Schema(BaseModel):
@@ -142,7 +142,11 @@ class DTSchema(SchemaObject):
     ...
 
 
-class StringDTSchema(DTSchema):
+class PrimitiveDTSchema(DTSchema):
+    ...
+
+
+class StringDTSchema(PrimitiveDTSchema):
 
     type: str = Field("string", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -178,7 +182,7 @@ class EmailDTSchema(StringDTSchema):
     format: str = Field("email", const=True)
 
 
-class IntegerDTSchema(DTSchema):
+class IntegerDTSchema(PrimitiveDTSchema):
 
     type: str = Field("integer", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -194,7 +198,7 @@ class Int64DTSchema(IntegerDTSchema):
     format: str = Field("int64", const=True)
 
 
-class NumberDTSchema(DTSchema):
+class NumberDTSchema(PrimitiveDTSchema):
 
     type: str = Field("number", const=True)
     format: Optional[str] = Field(None, const=True)
@@ -210,13 +214,13 @@ class DoubleDTSchema(NumberDTSchema):
     format: str = Field("double", const=True)
 
 
-class BoolDTSchema(DTSchema):
+class BoolDTSchema(PrimitiveDTSchema):
 
     type: str = Field('boolean', const=True)
     format: Optional[str] = Field(None, const=True)
 
 
-class ArrayDTSchema(SchemaObject):
+class ArrayDTSchema(DTSchema):
 
     type: str = Field("array", const=True)
     items: SchemaObject
@@ -237,7 +241,7 @@ class MixedTypeArrayDTSchema(ArrayDTSchema):
     items: _OneOf
 
 
-class ObjectsObject(SchemaObject):
+class ObjectsDTSchema(DTSchema):
 
     type: str = Field('object', const=True)
     properties: Dict[str, SchemaObject]
@@ -449,18 +453,6 @@ class ServerObject(Schema):
 
 
 # Path schemas
-class MediaType(str, Enum):
-
-    JSON = "application/json"
-    XML = "application/xml"
-    PDF = "application/pdf"
-    URL_ENCODED = "application/x-www-form-urlencoded"
-    MULTIPART = "multipart/form-data"
-    PLAIN = "text/plain; charset=utf-8"
-    HTML = "text/html"
-    PNG = "image/png"
-
-
 SchemaT = TypeVar("SchemaT", bound=Schema)
 # TODO ComponentSchema is different from ReferenceSchema.
 FieldSchemaT = TypeVar(
@@ -710,7 +702,7 @@ class ResponseObject(Schema):
     # A map containing descriptions of potential response payloads.
     # The key is a media type or media type range and the value
     # describes it.
-    content: Optional[Dict[MediaType, SchemaMapping[Any]]]
+    content: Optional[Dict[MediaTypeEnum, MediaTypeObject]]
 
     # A map of operations links that can be followed from the response.
     links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
@@ -732,7 +724,7 @@ class RequestBodyObject(Schema):
     description: Optional[str]
 
     # The content of the request body.
-    content: Dict[MediaType, MediaTypeObject]
+    content: Dict[MediaTypeEnum, MediaTypeObject]
 
     # Determines if the request body is required in the request.
     required: Optional[bool]

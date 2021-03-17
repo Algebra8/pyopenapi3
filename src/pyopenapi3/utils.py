@@ -9,9 +9,11 @@ from typing import (
     cast,
     Callable,
     Dict,
-    List
+    List,
+    Generator
 )
 from string import Formatter
+import inspect
 
 from .objects import (
     Number,
@@ -24,7 +26,7 @@ from .objects import (
     Primitive,
     Component,
     OpenApiObject, Email, Float, Double, Int32, Int64,
-    Date, DateTime, Byte, Binary, Password
+    Date, DateTime, Byte, Binary, Password, MediaType
 )
 import pyopenapi3.objects  # Used to get a class from a name.
 from .schemas import (
@@ -35,13 +37,16 @@ from .schemas import (
     BoolDTSchema, ArrayDTSchema,
     ComponentsObject,
     ReferenceObject,
+    PrimitiveDTSchema,
+    ObjectsDTSchema,
     DTSchema,
     Schema,
     FieldSchemaT,
     SchemaMapping,
-    MediaType,
+    MediaTypeEnum,
     AnyTypeArrayDTSchema,
-    MixedTypeArrayDTSchema
+    MixedTypeArrayDTSchema,
+    MediaTypeObject
 )
 
 
@@ -78,17 +83,21 @@ class _ObjectToDTSchema:
     # Objects
     Object = ReferenceObject
 
-    def __call__(self, cls: Type):
-        n = cls.__name__
+    def __call__(self, cls_or_name: Union[str, Type]) -> Type[DTSchema]:
+        if inspect.isclass(cls_or_name):
+            n = cls_or_name.__name__
+        else:
+            n = cls_or_name
         if hasattr(self, n):
             return getattr(self, n)
+        # TODO raise error?
 
 
 ObjectToDTSchema = _ObjectToDTSchema()
 
 
 # Helper for formating descriptions.
-def _format_description(s: Optional[str]) -> Optional[str]:
+def format_description(s: Optional[str]) -> Optional[str]:
     # TODO what if s is None...
     if s is None:
         return
@@ -99,7 +108,7 @@ def _format_description(s: Optional[str]) -> Optional[str]:
 
 
 def parse_name_and_type_from_fmt_str(
-        formatted_str) -> Tuple[Optional[str]]:
+        formatted_str) -> Generator[Tuple[str, Type[DTSchema]]]:
     """
     Parse a formatted string and return the names
     of the args and their types.
@@ -111,50 +120,12 @@ def parse_name_and_type_from_fmt_str(
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
-                yield arg_name, _get_field_from_name(_type_name)
+                yield arg_name, ObjectToDTSchema(_type_name)
             except AttributeError:
                 raise ValueError(
                     "A non-`Field` or `OpenApiObject` type was found. "
                     f"Can't use `{_type_name}` as a type in {formatted_str}."
                 ) from None
-
-
-def _get_field_from_name(name: Optional[str]) -> Optional[Type[Field]]:
-    """Get the Field type from a given name.
-
-    E.g. "Int64" -> <class 'pyopenapi3.fields.Int64'>
-    """
-    if name is not None:
-        return getattr(pyopenapi3.objects, name)
-
-
-# Field parsers.
-def parse_attr(o):
-    if issubclass(o, Number):
-        return parse_numbers(o)
-    elif issubclass(o, String):
-        return parse_strings(o)
-    elif o == Boolean:
-        return {'type': 'boolean'}
-    raise ValueError(f"Attr for {o} not defined.")
-
-
-def parse_strings(s):
-    if s == String:
-        return {'type': 'string'}
-    else:
-        return {'type': 'string', 'format': s.__name__.lower()}
-
-
-def parse_numbers(n):
-    if n == Number:
-        return {'type': 'number'}
-    elif n == Integer:
-        return {'type': 'integer'}
-    elif issubclass(n, Number) and not issubclass(n, Integer):
-        return {'type': 'number', 'format': n.__name__.lower()}
-    elif issubclass(n, Integer):
-        return {'type': 'integer', 'format': n.__name__.lower()}
 
 
 def create_reference(name: str) -> ReferenceObject:
@@ -173,83 +144,35 @@ def mark_component_and_attach_schema(obj, schema):
 
 def create_schema(
         __type: Type[OpenApiObject],
-        is_reference: Optional[bool] = None,
-        description: Optional[str] = None,
-        read_only: Optional[bool] = None,
-        example: Optional[Any] = None,
-        **kwargs
+        **kwargs: Any
 ) -> Schema:
-    if issubclass(__type, Primitive):
-        return convert_primitive_to_schema(
-            __type, description=description,
-            read_only=read_only, example=example
-        )
-    if issubclass(__type, Array):
-        return convert_array_to_schema(__type)
     if issubclass(__type, Component):
-        assert is_reference is not None
-        return convert_component_to_schema(
-            __type, description=description,
-            is_reference=is_reference
-        )
-
-
-def convert_component_to_schema(
-        component: Type[Component],
-        description: Optional[str],
-        is_reference: bool
-) -> Union[ComponentsObject, ReferenceObject]:
-    assert is_reference is not None
-    if is_reference:
-        return create_reference(component.__name__)
+        return convert_objects_to_schema(__type)
+    elif issubclass(__type, Primitive):
+        return convert_primitive_to_schema(__type, **kwargs)
+    elif issubclass(__type, Array):
+        return convert_array_to_schema(__type, **kwargs)
     else:
-        return _convert_component_to_schema(component, description=description)
+        # TODO Error handling
+        raise ValueError("Wrong type.")
 
 
-def _convert_component_to_schema(
-        component: Type[Component],
-        description: Optional[str]
-) -> ComponentsObject:
-    """Convert non-reference Component object."""
-    schema = ComponentsObject(description=description)
-    for attr in component.__dict__.values():
-        if hasattr(attr, OPENAPI_DEF):
-            property_schema: Union[
-                DTSchema,
-                ComponentsObject,
-                ReferenceObject,
-                ArrayDTSchema
-            ] = getattr(attr, OPENAPI_DEF)
-            # Don't need to `.dict()` these because
-            # top-level `.dict()` called on `schema`
-            # will recursively convert them.
-            schema.properties.update(property_schema)
-    return schema
+def convert_objects_to_schema(obj: Type[Component]) -> ReferenceObject:
+    # Any non-reference object should be created by the
+    # Components builder.
+    return create_reference(obj.__name__)
 
 
 def convert_primitive_to_schema(
-        primitive: Type[Primitive], *,
-        description: Optional[str],
-        read_only: bool,
-        example: Optional[Any]
-) -> DTSchema:
-    schema = DTSchema(**parse_attr(primitive))
-    if description is not None:
-        schema.description = description
-    if read_only:
-        # This may seem redundant but we do not want to
-        # clutter the OpenAPI definition with 'readOnly = false'.
-        # So, only set `readOnly` if it is True.
-        schema.readOnly = True
-    if example is not None:
-        schema.example = example
-    return schema
+        primitive: Type[Primitive], **kwargs) -> PrimitiveDTSchema:
+    return cast(PrimitiveDTSchema, ObjectToDTSchema(primitive)(**kwargs))
 
 
-def convert_array_to_schema(array: Type[Array], **kwargs: Any):
-    schema = ObjectToDTSchema(array)
-    if schema is AnyTypeArrayDTSchema:
-        return schema(**kwargs)
+def convert_array_to_schema(
+        array: Type[Array], **kwargs: Any) -> ArrayDTSchema:
+    schema_type = cast(Type[ArrayDTSchema], ObjectToDTSchema(array))
+    if schema_type is AnyTypeArrayDTSchema:
+        return schema_type(**kwargs)
     else:
         sub_schemas = []
         for _type in array.tvars:
@@ -258,51 +181,11 @@ def convert_array_to_schema(array: Type[Array], **kwargs: Any):
                 continue
             sub_schemas.append(ObjectToDTSchema(_type)())
 
-        if schema is MixedTypeArrayDTSchema:
+        if schema_type is MixedTypeArrayDTSchema:
             items = {'oneOf': sub_schemas}
-            return schema(items=items, **kwargs)
+            return schema_type(items=items, **kwargs)
         else:
-            return schema(items=sub_schemas[0], **kwargs)
-
-
-def _convert_array_to_schema(array: Type[Array]) -> ArrayDTSchema:
-    """Convert a concrete array type to an ArraySchema."""
-    schema = ArrayDTSchema()
-
-    # The types contained in the Array:
-    # Array[int, str] -> tvars = (int, str)
-    tvars: Tuple[
-        Type[
-            Union[Component, Field]
-        ]
-    ] = array.tvars
-    if len(tvars) == 1:
-        # The array only holds one type: could be
-        # a specific schema or arbitrary types (aka ...).
-        if is_arb_type(tvars[0]):
-            return ArrayDTSchema()
-
-        schema.items = create_schema(
-            cast(Type[OpenApiObject], tvars[0]),
-            # In case it is a custom object,
-            # only pass in a reference
-            is_reference=True
-        )
-    else:
-        # The array is a "mixed-type array",
-        # e.g. ["foo", 5, -2, "bar"]
-        schema.items = {'oneOf': []}
-        for t in tvars:
-            schema.items['oneOf'].append(
-                create_schema(
-                    cast(Type[OpenApiObject], t),
-                    # As mentioned above, in the case that
-                    # it is a custom object, only return a
-                    # reference.
-                    if_reference=True
-                )
-            )
-    return schema
+            return schema_type(items=sub_schemas[0], **kwargs)
 
 
 def build_property_schema_from_func(
@@ -323,7 +206,7 @@ def build_property_schema_from_func(
     description = f.__doc__
 
     schema = create_schema(
-        property_type, description=_format_description(description),
+        property_type, description=format_description(description),
         read_only=read_only, example=example,
         # If a custom object is found here, then it
         # should only be referenced.
@@ -360,42 +243,23 @@ def inject_component(cls):
         return injected
 
 
-def map_field_to_schema(
-        field_type, is_reference: bool = False) -> Type[FieldSchemaT]:
-    if issubclass(field_type, Primitive):
-        return DTSchema
-    elif issubclass(field_type, Array):
-        return ArrayDTSchema
-    elif issubclass(field_type, Component):
-        if is_reference:
-            return ReferenceObject
-        return ComponentsObject
-    else:
-        raise ValueError(
-            "Must provide a `Field` or custom component."
-        )
+ContentSchema = Optional[Dict[MediaTypeEnum, MediaTypeObject]]
 
 
-ContentSchema = Optional[Dict[MediaType, SchemaMapping[FieldSchemaT]]]
-
-
-def build_content_schema_from_content(
-        content: List[Tuple[str, Any]]) -> ContentSchema:
+def build_mediatype_schema_from_content(
+        content: Optional[List[Union[MediaType, Tuple[Any]]]]
+) -> ContentSchema:
     if content is None:
         return
     content_schema = {}
-    for media_type, field_type in content:
-        field_schema_tp = map_field_to_schema(
-            field_type, is_reference=True
+    for media_type, field_type, example, examples, encoding in content:
+        # Note, only bare-bones or references allowed, such as
+        # Int64, Array[~], ref->Objects.
+        schema = create_schema(field_type)  # validated schema
+        media_type = MediaTypeEnum(media_type)
+        content_schema[media_type] = MediaTypeObject(
+            schema=schema, example=example, examples=examples,
+            encoding=encoding
         )
-        media_type = cast(MediaType, media_type)
-        schema = cast(
-            Type[FieldSchemaT],
-            create_schema(field_type, is_reference=True)
-        )
-        content_schema[media_type] = \
-            SchemaMapping[field_schema_tp](schema=schema)
 
     return content_schema
-
-

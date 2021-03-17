@@ -2,6 +2,8 @@ from typing import Iterable, Any, Optional, Dict, List, Tuple, Union, Type
 import functools
 from dataclasses import dataclass, asdict
 
+from .types import MediaTypeEnum
+
 
 class OpenApiObject:
     ...
@@ -141,6 +143,77 @@ class Component(OpenApiObject):
 # TODO This might not make sense.
 class Reference(Component):
     ...
+
+
+class MediaType(OpenApiObject):
+
+    def __init__(
+            self,
+            __name=None,
+            __field=None,
+            /, *,
+            example=None,
+            examples=None,
+            encoding=None
+    ):
+        self.name = __name
+        self.field = __field
+        self.example = example
+        self.examples = examples
+        self.encoding = encoding
+
+    def __iter__(self):
+        return (
+            self.name, self.field, self.example, self.examples, self.encoding
+        )
+
+
+class JSONMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.JSON, __field, **kwargs)
+
+
+class XMLMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.XML, __field, **kwargs)
+
+
+class PDFMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.PDF, __field, **kwargs)
+
+
+class URLEncodedMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.URL_ENCODED, __field, **kwargs)
+
+
+class MultiPartMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.MULTIPART, __field, **kwargs)
+
+
+class TextPlainMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.PLAIN, __field, **kwargs)
+
+
+class HTMLMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.HTML, __field, **kwargs)
+
+
+class PNGMediaType(MediaType):
+
+    def __init__(self, __field, **kwargs):
+        super().__init__(MediaTypeEnum.PNG, __field, **kwargs)
 
 
 @dataclass
