@@ -10,7 +10,8 @@ from typing import (
     Callable,
     Dict,
     List,
-    Generator
+    Generator,
+    Iterable
 )
 from string import Formatter
 import inspect
@@ -251,7 +252,7 @@ ContentSchema = Optional[
 
 
 def build_mediatype_schema_from_content(
-        content: Optional[List[Union[MediaType, Tuple[Any]]]],
+        content: Optional[List[Union[MediaType, Iterable]]],
         # Allow validating once; by returning a dict,
         # other side can use `construct` for quicker
         # build time.
