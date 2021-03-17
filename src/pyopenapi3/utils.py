@@ -243,11 +243,20 @@ def inject_component(cls):
         return injected
 
 
-ContentSchema = Optional[Dict[MediaTypeEnum, MediaTypeObject]]
+ContentSchema = Optional[
+    Union[
+        Dict[MediaTypeEnum, MediaTypeObject],
+        Dict[str, Dict[str, Any]]
+    ]
+]
 
 
 def build_mediatype_schema_from_content(
-        content: Optional[List[Union[MediaType, Tuple[Any]]]]
+        content: Optional[List[Union[MediaType, Tuple[Any]]]],
+        # Allow validating once; by returning a dict,
+        # other side can use `construct` for quicker
+        # build time.
+        as_dict=False
 ) -> ContentSchema:
     if content is None:
         return
@@ -257,9 +266,14 @@ def build_mediatype_schema_from_content(
         # Int64, Array[~], ref->Objects.
         schema = create_schema(field_type)  # validated schema
         media_type = MediaTypeEnum(media_type)
-        content_schema[media_type] = MediaTypeObject(
+        media_object = MediaTypeObject(
             schema=schema, example=example, examples=examples,
             encoding=encoding
         )
+
+        if as_dict:
+            media_object = media_object.dict()
+
+        content_schema[media_type] = media_object
 
     return content_schema

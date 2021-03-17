@@ -10,7 +10,9 @@ class OpenApiObject:
 
 
 class Field(OpenApiObject):
-    ...
+
+    def __repr__(self):
+        return self.__class__.__qualname__
 
 
 class Primitive(Field):
@@ -163,9 +165,13 @@ class MediaType(OpenApiObject):
         self.encoding = encoding
 
     def __iter__(self):
-        return (
-            self.name, self.field, self.example, self.examples, self.encoding
+        return iter(
+            (self.name, self.field, self.example,
+             self.examples, self.encoding)
         )
+
+    def __repr__(self):
+        return f"{self.__class__.__qualname__}({self.field.__qualname__})"
 
 
 class JSONMediaType(MediaType):
