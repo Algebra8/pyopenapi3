@@ -10,7 +10,8 @@ from typing import (
     Callable,
     Dict,
     List,
-    Generator
+    Generator,
+    Iterable
 )
 from string import Formatter
 import inspect
@@ -28,7 +29,6 @@ from .objects import (
     OpenApiObject, Email, Float, Double, Int32, Int64,
     Date, DateTime, Byte, Binary, Password, MediaType
 )
-import pyopenapi3.objects  # Used to get a class from a name.
 from .schemas import (
     StringDTSchema, ByteDTSchema, BinaryDTSchema, DateDTSchema,
     DateTimeDTSchema, PasswordDTSchema, IntegerDTSchema, Int32DTSchema,
@@ -81,9 +81,14 @@ class _ObjectToDTSchema:
     AnyTypeArray = AnyTypeArrayDTSchema
 
     # Objects
-    Object = ReferenceObject
+    Component = ReferenceObject
 
     def __call__(self, cls_or_name: Union[str, Type]) -> Type[DTSchema]:
+        """Return the schema of a Data Type.
+
+        Note that only non-complex data types are allowered here:
+        cannot
+        """
         if inspect.isclass(cls_or_name):
             n = cls_or_name.__name__
         else:
@@ -252,7 +257,7 @@ ContentSchema = Optional[
 
 
 def build_mediatype_schema_from_content(
-        content: Optional[List[Union[MediaType, Tuple[Any]]]],
+        content: Optional[List[Union[MediaType, Iterable]]],
         # Allow validating once; by returning a dict,
         # other side can use `construct` for quicker
         # build time.
