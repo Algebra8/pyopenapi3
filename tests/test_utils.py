@@ -1,3 +1,5 @@
+from unittest import mock
+
 from pyopenapi3.objects import (
     TextPlainMediaType,
     JSONMediaType,
@@ -10,6 +12,7 @@ from pyopenapi3.objects import (
 from pyopenapi3.schemas import (
     MediaTypeObject,
     Int64DTSchema,
+    EmailDTSchema,
     ReferenceObject,
     ArrayDTSchema,
     AnyTypeArrayDTSchema,
@@ -20,7 +23,9 @@ from pyopenapi3.utils import (
     build_mediatype_schema_from_content,
     convert_primitive_to_schema,
     convert_objects_to_schema,
-    convert_array_to_schema
+    convert_array_to_schema,
+    create_schema,
+    parse_name_and_type_from_fmt_str
 )
 
 
@@ -100,3 +105,42 @@ def test_array_to_schema():
     )
 
 
+@mock.patch('pyopenapi3.utils.convert_array_to_schema')
+@mock.patch('pyopenapi3.utils.convert_primitive_to_schema')
+@mock.patch('pyopenapi3.utils.convert_objects_to_schema')
+def test_create_schema(
+        mock_objects_to_schema,
+        mock_prim_to_schema,
+        mock_arr_to_schema
+):
+    kwargs = {'a': 1, 'b': 2}
+
+    # objects to schema
+    class Customer(Component):
+        ...
+
+    create_schema(Customer, **kwargs)
+    # create_schema will only create references for custom components,
+    # so kwargs should not be passed to it.
+    mock_objects_to_schema.assert_called_once_with(Customer)
+
+    # primitive to schema
+    create_schema(Int64, **kwargs)
+    mock_prim_to_schema.assert_called_once_with(Int64, **kwargs)
+
+    # array to schema
+    arr = Array[Int64, Email, Customer]
+    create_schema(arr, **kwargs)
+    mock_arr_to_schema.assert_called_once_with(arr, **kwargs)
+
+
+def test_parse_name_and_type():
+    fmt_str = "{id:Int64}/{email:Email}/"
+
+    parsed_gen = parse_name_and_type_from_fmt_str(fmt_str)
+
+    _id = next(parsed_gen)
+    assert _id == ("id", Int64DTSchema)
+
+    email = next(parsed_gen)
+    assert email == ("email", EmailDTSchema)

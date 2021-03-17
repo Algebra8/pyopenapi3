@@ -81,9 +81,14 @@ class _ObjectToDTSchema:
     AnyTypeArray = AnyTypeArrayDTSchema
 
     # Objects
-    Object = ReferenceObject
+    Component = ReferenceObject
 
     def __call__(self, cls_or_name: Union[str, Type]) -> Type[DTSchema]:
+        """Return the schema of a Data Type.
+
+        Note that only non-complex data types are allowered here:
+        cannot
+        """
         if inspect.isclass(cls_or_name):
             n = cls_or_name.__name__
         else:
