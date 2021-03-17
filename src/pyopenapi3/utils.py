@@ -28,7 +28,6 @@ from .objects import (
     OpenApiObject, Email, Float, Double, Int32, Int64,
     Date, DateTime, Byte, Binary, Password, MediaType
 )
-import pyopenapi3.objects  # Used to get a class from a name.
 from .schemas import (
     StringDTSchema, ByteDTSchema, BinaryDTSchema, DateDTSchema,
     DateTimeDTSchema, PasswordDTSchema, IntegerDTSchema, Int32DTSchema,
