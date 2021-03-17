@@ -79,6 +79,11 @@ class OpenApiJsonSchemaDef(JsonSchemaDef):
     default: Optional[Any]
 
 
+class ReferenceObject(OpenApiJsonSchemaDef):
+
+    ref: str = Field(..., alias="$ref")
+
+
 class SchemaObject(OpenApiJsonSchemaDef):
     """Schema for a Schema Object.
 
@@ -134,6 +139,9 @@ class SchemaObject(OpenApiJsonSchemaDef):
     additional_properties: Optional[
         Union[Dict[str, OpenApiJsonSchemaDef], bool]
     ] = Field(None, alias='additionalProperties')
+
+    # Make Reference Object distinct from a Schema Object.
+    ref: Optional[str] = Field(None, alias="$ref", const=True)
 
 
 # Data Types
@@ -245,11 +253,6 @@ class ObjectsDTSchema(DTSchema):
 
     type: str = Field('object', const=True)
     properties: Dict[str, SchemaObject]
-
-
-class ReferenceObject(SchemaObject):
-
-    ref: str = Field(..., alias="$ref")
 
 
 class SecuritySchemeObject(Schema):
