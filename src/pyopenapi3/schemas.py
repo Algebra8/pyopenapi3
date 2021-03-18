@@ -4,6 +4,8 @@ from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
 from string import Formatter
 from enum import Enum
 
+from pathlib import Path
+
 from pydantic import (
     BaseModel,
     Field,
@@ -415,7 +417,7 @@ class ServerObject(Schema):
     """
 
     # A URL to the target host.
-    url: Optional[VariableAnyUrl]
+    url: Optional[Path]
 
     # An optional string describing the host designated by the URL.
     description: Optional[str]
@@ -454,15 +456,6 @@ class ServerObject(Schema):
                 "https://swagger.io/specification/#server-object."
             )
         return v
-
-
-# Path schemas
-SchemaT = TypeVar("SchemaT", bound=Schema)
-# TODO ComponentSchema is different from ReferenceSchema.
-FieldSchemaT = TypeVar(
-    "FieldSchemaT",
-    DTSchema, ArrayDTSchema
-)
 
 
 class ExampleObject(Schema):
@@ -918,22 +911,6 @@ class PathItemObject(Schema):
     parameters: Optional[List[Union[ParameterObject, ReferenceObject]]]
 
 
-class PathsObject(Schema):
-    """Schema for a Path Object.
-
-    Holds the relative paths to the individual endpoints and
-    their operations. Based on spec described in
-    https://swagger.io/specification/#paths-object.
-
-    The path is appended to the URL from the Server Object in order
-    to construct the full URL. The Paths MAY be empty, due to ACL
-    constraints.
-    """
-
-    # A relative path to an individual endpoint.
-    paths: Dict[str, PathItemObject]
-
-
 class TagObject(Schema):
     """Schema for a Tag Object.
 
@@ -972,7 +949,7 @@ class OpenApiObject(Schema):
     servers: Optional[List[ServerObject]]
 
     # The available paths and operations for the API.
-    paths: PathsObject
+    paths: Dict[str, PathItemObject]
 
     # An element to hold various schemas for the specification.
     components: Optional[ComponentsObject]
