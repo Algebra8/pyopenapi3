@@ -688,7 +688,7 @@ class ParameterObject(Schema):
     example: Optional[Any]
 
     # Examples of the parameter's potential value.
-    examples: Dict[str, Union[ExampleObject, ReferenceObject]]
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
 
     # Complex serialization
 
