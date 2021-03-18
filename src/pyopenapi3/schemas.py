@@ -10,6 +10,7 @@ from pydantic import (
     AnyUrl,
     EmailStr,
     validator,
+    root_validator
 )
 from pydantic.generics import GenericModel
 
@@ -661,6 +662,52 @@ class ParameterObject(Schema):
 
     # Sets the ability to pass empty-valued parameters.
     allow_empty_value: Optional[bool] = Field(None, alias='allowEmptyValue')
+
+    # Simple serialization
+
+    # Describes how the parameter value will be serialized
+    # depending on the type of the parameter value.
+    style: Optional[str]
+
+    # When this is true, parameter values of type array or
+    # object generate separate parameters for each value of
+    # the array or key-value pair of the map.
+    explode: Optional[bool]
+
+    # Determines whether the parameter value SHOULD allow
+    # reserved characters, as defined by RFC3986 :/?#[]@!$&'()*+,;=
+    # to be included without percent-encoding.
+    allow_reserved: Optional[bool] = Field(None, alias='allowReserved')
+
+    # The schema defining the type used for the parameter.
+    schema_field: Optional[
+        Union[SchemaObject, ReferenceObject]
+    ] = Field(None, alias='schema')
+
+    # Example of the parameter's potential value.
+    example: Optional[Any]
+
+    # Examples of the parameter's potential value.
+    examples: Dict[str, Union[ExampleObject, ReferenceObject]]
+
+    # Complex serialization
+
+    # A map containing the representations for the parameter.
+    content: Optional[Dict[MediaTypeEnum, MediaTypeObject]]
+
+    @root_validator(pre=True)
+    def validate_serialization(cls, v):
+        has_content = 'content' in v
+        has_schema = 'schema' in v
+
+        if (has_content and has_schema) or not (has_content or has_schema):
+            raise ValueError(
+                "A parameter MUST contain either a schema property, "
+                "or a content property, but not both. See https://"
+                "swagger.io/specification/#parameter-object for more"
+                " info."
+            )
+        return v
 
 
 class HeaderObject(ParameterObject):
