@@ -6,7 +6,8 @@ from collections import deque
 from pyopenapi3.utils import (
     ObjectToDTSchema,
     format_description,
-    build_mediatype_schema_from_content
+    build_mediatype_schema_from_content,
+    create_schema
 )
 from pyopenapi3.objects import (
     Int64,
@@ -174,6 +175,13 @@ class ParamBuilder:
         self.__in = __in
 
     def __call__(self, **kwargs):
+        if 'schema' in kwargs:
+            schema = kwargs.pop('schema')
+            kwargs['schema'] = create_schema(schema)
+        elif 'content' in kwargs:
+            content = kwargs.pop('content')
+            kwargs['content'] = build_mediatype_schema_from_content(content)
+
         def wrapper(f):
             BuilderBus.parameters[f] = ParameterObject(
                 in_field=self.__in, **kwargs)
@@ -249,7 +257,7 @@ class Path1:
         content=[JSONMediaType(Int64)]
     )
 
-    @open_bldr.path.query_param(name='id', required=True)
+    @open_bldr.path.query_param(name='id', schema=Int64, required=True)
     def get(self) -> Op[request_body, responses]:
         """Get request for path."""
 
@@ -268,7 +276,7 @@ class Path2:
         content=[JSONMediaType(Int64)]
     )
 
-    @open_bldr.path.query_param(name='pet_id', required=True)
+    @open_bldr.path.query_param(name='pet_id', schema=String, required=True)
     def get(self) -> Op[request_body, responses]:
         """Get request for path."""
 
