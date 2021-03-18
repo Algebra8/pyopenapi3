@@ -150,6 +150,12 @@ class DTSchema(SchemaObject):
     ...
 
 
+class ObjectsDTSchema(DTSchema):
+
+    type: str = Field('object', const=True)
+    properties: Dict[str, SchemaObject]
+
+
 class PrimitiveDTSchema(DTSchema):
     ...
 
@@ -247,12 +253,6 @@ class _OneOf(SchemaObject):
 class MixedTypeArrayDTSchema(ArrayDTSchema):
 
     items: _OneOf
-
-
-class ObjectsDTSchema(DTSchema):
-
-    type: str = Field('object', const=True)
-    properties: Dict[str, SchemaObject]
 
 
 class SecuritySchemeObject(Schema):
@@ -597,11 +597,6 @@ class LinkObject(Schema):
     server: Optional[ServerObject]
 
 
-class SchemaMapping(GenericModel, Generic[SchemaT], Schema):
-
-    schema_field: SchemaT = Field(..., alias='schema')
-
-
 class MediaTypeObject(Schema):
     """Schema for a Media Type Object.
 
@@ -635,7 +630,7 @@ class ParamLocation(str, Enum):
     COOKIE = 'cookie'
 
 
-class ParameterObject(SchemaMapping[FieldSchemaT]):
+class ParameterObject(Schema):
     """Schema for a Parameter Object.
 
     Describes a single operation parameter, as described in
@@ -752,7 +747,7 @@ class OperationObject(Schema):
     # A list of tags for API documentation control.
     tags: Optional[List[str]]
 
-    # 	A short summary of what the operation does.
+    # A short summary of what the operation does.
     summary: Optional[str]
 
     # A verbose explanation of the operation behavior.
@@ -788,7 +783,7 @@ class OperationObject(Schema):
 
     # A declaration of which security mechanisms can be used
     # for this operation.
-    security: List[SecurityReqObject]
+    security: Optional[List[SecurityReqObject]]
 
     # An alternative server array to service this operation.
     servers: Optional[List[ServerObject]]

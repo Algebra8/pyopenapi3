@@ -42,7 +42,6 @@ from .schemas import (
     DTSchema,
     Schema,
     FieldSchemaT,
-    SchemaMapping,
     MediaTypeEnum,
     AnyTypeArrayDTSchema,
     MixedTypeArrayDTSchema,

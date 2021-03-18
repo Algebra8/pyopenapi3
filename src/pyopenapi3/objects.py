@@ -228,6 +228,8 @@ class Response(OpenApiObject):
     status: int
     description: str
     content: Optional[Dict[str, Any]] = None
+    headers: Optional[Any] = None
+    links: Optional[Any] = None
 
     def as_dict(self):
         return asdict(self)
@@ -236,9 +238,25 @@ class Response(OpenApiObject):
 @dataclass
 class RequestBody(OpenApiObject):
 
-    content: List[Tuple[str, Type[Union[Field, Component]]]]
+    content: List[Union[MediaType, Any]]
     description: Optional[str] = None
     required: bool = False
 
     def as_dict(self):
         return asdict(self)
+
+
+class Op(Field):
+
+    request_body = None
+    responses = None
+
+    def __repr__(self):
+        return f"Op[{self.request_body}, {self.responses}]"
+
+    def __class_getitem__(cls, parameters):
+
+        request_body, responses = parameters
+        return type("Op", (), {'request_body': request_body,
+                               'responses': responses})
+
