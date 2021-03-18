@@ -1,7 +1,8 @@
 # from __future__ import annotations
 from typing import Tuple, get_type_hints, Union, List, Any, Dict
-
 from collections import deque
+
+from pydantic import ValidationError
 
 from pyopenapi3.utils import (
     ObjectToDTSchema,
@@ -24,25 +25,31 @@ from pyopenapi3.schemas import (
     OperationObject,
     ParameterObject,
     PathItemObject,
-    PathsObject
+    OpenApiObject,
+    InfoObject,
+    ServerObject
 )
+
+
+_build_cache = {}
 
 
 class Bus:
 
     def __init__(self, topic):
+        global _build_cache
+        self.cache = _build_cache
         self.topic = topic
-        self.cache = None
 
     def __getitem__(self, item):
-        return self.cache[item]
+        return self.cache[self.topic][item]
 
     def __setitem__(self, key, value):
-        if self.cache is None:
-            self.cache = {key: deque()}
-        if key not in self.cache:
-            self.cache[key] = deque()
-        self.cache[key].appendleft(value)
+        if self.topic not in self.cache:
+            self.cache[self.topic] = {}
+        if key not in self.cache[self.topic]:
+            self.cache[self.topic][key] = deque()
+        self.cache[self.topic][key].appendleft(value)
 
 
 class BuilderBus:
@@ -192,8 +199,6 @@ class ParamBuilder:
 
 class PathsBuilder:
 
-    paths = {}
-
     _methods = {
         'get', 'post', 'put', 'patch',
         'delete', 'head', 'options',
@@ -210,9 +215,6 @@ class PathsBuilder:
         self.build = None
 
     def __call__(self, cls):
-
-        self.paths[cls.path] = {}
-
         methods = {
             func_name: func for func_name, func in cls.__dict__.items()
             if func_name in self._methods
@@ -225,22 +227,99 @@ class PathsBuilder:
         if path_items:
             path_item = path_items.popleft()
             if self.build is None:
-                self.build = PathsObject(
-                    paths={cls.path: path_item}
-                )
+                self.build = {cls.path: path_item}
             else:
-                self.build.paths[cls.path] = path_item
+                self.build[cls.path] = path_item
 
         return cls
 
 
-class OpenApiBuilder:
+class InfoBuilder:
+
+    schema = InfoObject
+    _field_keys = InfoObject.__fields__.keys()
 
     def __init__(self):
+        self._build = None   # type: InfoObject
+
+    @property
+    def build(self):
+        return self._build
+
+    def __call__(self, cls):
+        info_object = self.schema(
+            **{k: v for k, v in cls.__dict__.items()
+               if k in self._field_keys}
+        )
+        self._build = info_object
+
+
+class ServerBuilder:
+
+    schema = ServerObject
+    _field_keys = ServerObject.__fields__.keys()
+
+    def __init__(self):
+        self._builds: List[ServerObject] = []
+
+    @property
+    def build(self):
+        if not self._builds:
+            # servers have not been provided, a default
+            # server with a url value of '/' will be provided.
+            return [
+                self.schema(
+                    url='/', description="Default server"
+                )
+            ]
+        return self._builds
+
+    def __call__(self, cls):
+        server_object = self.schema(
+            **{k: v for k, v in cls.__dict__.items()
+               if k in self._field_keys}
+        )
+        self._builds.append(server_object)
+
+
+class OpenApiBuilder:
+
+    schema = OpenApiObject
+
+    def __init__(self, version: str = '3.0.0'):
+        self.version = version
+
+        self.info = InfoBuilder()
+        self.server = ServerBuilder()
         self.path = PathsBuilder()
+
+        self._build = None
+
+    @property
+    def build(self):
+        if self._build is not None:
+            return self._build
+
+        build = self.schema(
+            openapi=self.version,
+            info=self.info.build,
+            servers=self.server.build,
+            paths=self.path.build
+        )
+
+        self._build = build
+        return build
 
 
 open_bldr = OpenApiBuilder()
+
+
+@open_bldr.info
+class Info:
+
+    title = "Pet store api."
+    version = "0.0.1"
+    description = "A store for buying pets online."
 
 
 @open_bldr.path
