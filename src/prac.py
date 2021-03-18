@@ -38,11 +38,13 @@ class Bus:
 
     def __init__(self, topic):
         global _build_cache
+        _build_cache[topic] = {}
+
         self.cache = _build_cache
         self.topic = topic
 
     def __getitem__(self, item):
-        return self.cache[self.topic][item]
+        return self.cache[self.topic].get(item, deque())
 
     def __setitem__(self, key, value):
         if self.topic not in self.cache:
@@ -74,7 +76,7 @@ class RequestBodyBuilder:
             rqbody: Union[RequestBody, Dict[str, Any], Any],
             sub=None
     ) -> None:
-        if rqbody is Ellipsis:
+        if rqbody in [..., None]:
             return
 
         if isinstance(rqbody, RequestBody):
@@ -124,13 +126,19 @@ class OperationBuilder:
 
     def __call__(self, method):
 
-        if method.__name__ in self.builds:
+        method_name = method.__name__  # e.g. get
+
+        if method_name in self.builds:
             raise ValueError("Can't have more than one GET per path.")
 
         op = get_type_hints(method, localns=self.context)['return']
 
         request_body = op.request_body
         responses = op.responses
+
+        if method_name == 'get' and request_body not in [None, ...]:
+            # TODO Error handling
+            raise ValueError("GET operation cannot have a requestBody.")
 
         self._rqbody_bldr(request_body, method)
         self._resp_bldr(responses, method)
@@ -189,10 +197,10 @@ class ParamBuilder:
             content = kwargs.pop('content')
             kwargs['content'] = build_mediatype_schema_from_content(content)
 
-        def wrapper(f):
-            BuilderBus.parameters[f] = ParameterObject(
+        def wrapper(_f):
+            BuilderBus.parameters[_f] = ParameterObject(
                 in_field=self.__in, **kwargs)
-            return f
+            return _f
 
         return wrapper
 
@@ -337,7 +345,7 @@ class Path1:
     )
 
     @open_bldr.path.query_param(name='id', schema=Int64, required=True)
-    def get(self) -> Op[request_body, responses]:
+    def get(self) -> Op[..., responses]:
         """Get request for path."""
 
 
@@ -356,9 +364,21 @@ class Path2:
     )
 
     @open_bldr.path.query_param(name='pet_id', schema=String, required=True)
-    def get(self) -> Op[request_body, responses]:
+    def get(self) -> Op[None, responses]:
+        """Get request for path."""
+
+    @open_bldr.path.query_param(name='pet_id', schema=String, required=True)
+    def post(self) -> Op[request_body, responses]:
         """Get request for path."""
 
 
-paths = open_bldr.path
+
+import ruamel.yaml as yaml
+
+with open('something.yaml', 'w') as f:
+    yaml.dump(
+        open_bldr.build.dict(),
+        f,
+        Dumper=yaml.RoundTripDumper
+    )
 
