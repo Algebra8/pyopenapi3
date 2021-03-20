@@ -1,14 +1,15 @@
-# from __future__ import annotations
-from typing import Tuple, get_type_hints, Union, List, Any, Dict
+from __future__ import annotations
+from typing import get_type_hints, Union, List, Any, Dict, Optional
 from collections import deque
+import re
 
 from pydantic import ValidationError
 
 from pyopenapi3.utils import (
-    ObjectToDTSchema,
-    format_description,
     build_mediatype_schema_from_content,
-    create_schema
+    create_schema,
+    format_description,
+    parse_name_and_type_from_fmt_str
 )
 from pyopenapi3.objects import (
     Int64,
@@ -19,7 +20,6 @@ from pyopenapi3.objects import (
     JSONMediaType
 )
 from pyopenapi3.schemas import (
-    ObjectsDTSchema,
     RequestBodyObject,
     ResponseObject,
     OperationObject,
@@ -68,9 +68,6 @@ class RequestBodyBuilder:
 
     schema = RequestBodyObject
 
-    def __init__(self, sub=None):
-        self.sub = sub
-
     def __call__(
             self,
             rqbody: Union[RequestBody, Dict[str, Any], Any],
@@ -95,10 +92,7 @@ class RequestBodyBuilder:
 
 class ResponseBuilder:
 
-    def __init__(self, sub=None):
-        self.sub = sub
-
-    def __call__(self, responses: List[Response], sub):
+    def __call__(self, responses: List[Response], sub=None):
         for response in responses:
             if isinstance(response, Response):
                 _response = response.as_dict()
@@ -115,23 +109,42 @@ class ResponseBuilder:
 
 class OperationBuilder:
 
-    def __init__(self, sub=None, context=None):
-        self.sub = sub
-        self.context = context
-
+    def __init__(self):
         self._rqbody_bldr = RequestBodyBuilder()
         self._resp_bldr = ResponseBuilder()
 
-        self.builds = {}
+        self.query_param = ParamBuilder('query')
+        self.cookie_param = ParamBuilder('cookie')
+        self.header_param = ParamBuilder('header')
 
-    def __call__(self, method):
+        self.builds = {}
+        self._attrs = {}
+
+    def __call__(self, method=None, /, context=None, **kwargs):
+
+        # If the client called `OperationBuilder`, then we use
+        # the `kwargs` passed in for every field on the `OperationObject`
+        # other than responses, request body, and params.
+        if method is None:
+
+            def wrapper(_f):
+                # Save the `kwags` in `_attrs` so that we can use
+                # them when __call__ is called with `method is not None`,
+                # i.e. when processing the path object at the class level.
+                # Note that class methods will get decorated **before** a
+                # class itself gets decorated, so we expect `_attrs` to
+                # be non-empty (assuming `kwags` was not empty).
+                self._attrs.update({_f: kwargs})
+                return _f
+
+            return wrapper
 
         method_name = method.__name__  # e.g. get
 
         if method_name in self.builds:
             raise ValueError("Can't have more than one GET per path.")
 
-        op = get_type_hints(method, localns=self.context)['return']
+        op = get_type_hints(method, localns=context)['return']
 
         request_body = op.request_body
         responses = op.responses
@@ -145,43 +158,85 @@ class OperationBuilder:
 
         builds = {
             'responses': {},
-            'request_body': None
+            'request_body': None,
+            'parameters': None
         }
 
         responses = BuilderBus.responses[method]
-        rqbody = BuilderBus.request_bodies[method]
-
         while responses:
             status, resp = responses.popleft()
             builds['responses'][status] = resp
 
+        rqbody = BuilderBus.request_bodies[method]
         if rqbody:
             # There should only be one request_body.
             builds['request_body'] = rqbody.popleft()
 
-        BuilderBus.operations[method] = OperationObject(**builds)
+        params = BuilderBus.parameters[method]
+        if params:
+            builds['parameters'] = list(params)
+
+        if method in self._attrs:
+            self._attrs[method].update(builds)
+        else:
+            self._attrs[method] = builds
+
+        BuilderBus.operations[method] = OperationObject(
+            **self._attrs[method],
+        )
 
 
 class PathItemBuilder:
 
-    def __init__(self, sub=None, context=None):
-        self.sub = sub
-        self.context = context
-
-        self._op_bldr = OperationBuilder(context=context)
+    def __init__(self):
+        self.op_bldr = OperationBuilder()
 
         self.builds = {}
 
     def __call__(self, cls, methods):
         attrs = {}
-        for name, method in methods.items():
-            self._op_bldr(method)
-            ops = BuilderBus.operations[method]
 
+        # Operation object building.
+        for name, method in methods.items():
+            self.op_bldr(method, context=cls.__dict__)
+            ops = BuilderBus.operations[method]
             if ops:
                 op = ops.popleft()
                 attrs[name] = op
-        BuilderBus.path_items[cls] = PathItemObject(**attrs)
+
+        # Other info for `PathItemObject`.
+
+        description = format_description(cls.__doc__)
+
+        summary = None
+        if hasattr(cls, 'summary'):
+            summary = getattr(cls, 'summary')
+
+        servers = None  # type: Optional[List[Any]]
+        if hasattr(cls, 'servers'):
+            servers = getattr(cls, 'servers')
+
+        # Build any `PathItemObject` level parameters.
+        parameters = []  # type: List[Any]
+        if hasattr(cls, 'parameters'):
+            parameters += getattr(cls, 'parameters')
+        # The given path may also hold params, e.g. "/users/{id:Int64}"
+        path = cls.path
+        for name, _type in parse_name_and_type_from_fmt_str(path):
+            parameters.append(
+                ParamBuilder('path').build_param(
+                    name=name, schema=_type, required=True
+                )
+            )
+
+        extra_attrs = {
+            'summary': summary,
+            'parameters': parameters or None,
+            'servers': servers,
+            'description': description
+        }
+
+        BuilderBus.path_items[cls] = PathItemObject(**attrs, **extra_attrs)
 
 
 class ParamBuilder:
@@ -190,19 +245,20 @@ class ParamBuilder:
         self.__in = __in
 
     def __call__(self, **kwargs):
+
+        def wrapper(_f):
+            BuilderBus.parameters[_f] = self.build_param(**kwargs)
+            return _f
+        return wrapper
+
+    def build_param(self, **kwargs):
         if 'schema' in kwargs:
             schema = kwargs.pop('schema')
             kwargs['schema'] = create_schema(schema)
         elif 'content' in kwargs:
             content = kwargs.pop('content')
             kwargs['content'] = build_mediatype_schema_from_content(content)
-
-        def wrapper(_f):
-            BuilderBus.parameters[_f] = ParameterObject(
-                in_field=self.__in, **kwargs)
-            return _f
-
-        return wrapper
+        return ParameterObject(in_field=self.__in, **kwargs)
 
 
 class PathsBuilder:
@@ -214,11 +270,14 @@ class PathsBuilder:
     }
 
     def __init__(self):
-        self.query_param = ParamBuilder('query')
-        self.header_param = ParamBuilder('header')
-        self.cookie_param = ParamBuilder('cookie')
-
         self._pathitem_bldr = PathItemBuilder()
+
+        # Client interface for params and operations
+        # object builders.
+        self.op = self._pathitem_bldr.op_bldr
+        self.query_param = self.op.query_param
+        self.header_param = self.op.header_param
+        self.cookie_param = self.op.cookie_param
 
         self.build = None
 
@@ -232,12 +291,22 @@ class PathsBuilder:
 
         path_items = BuilderBus.path_items[cls]
 
+        # In the case that cls's path contains formatted params,
+        # such as "/users/{id:Int64}", we need to parse out the
+        # acceptable parts: that is, Open API doesn't want "{name:type}",
+        # just "{name}".
+        path = re.sub(
+            "{([^}]*)}",
+            lambda mo: "{" + mo.group(1).split(':')[0] + "}",
+            cls.path
+        )
+
         if path_items:
             path_item = path_items.popleft()
             if self.build is None:
-                self.build = {cls.path: path_item}
+                self.build = {path: path_item}
             else:
-                self.build[cls.path] = path_item
+                self.build[path] = path_item
 
         return cls
 
@@ -290,6 +359,34 @@ class ServerBuilder:
         self._builds.append(server_object)
 
 
+class ComponentBuilder:
+
+    @property
+    def build(self):
+        return None
+
+
+class SecurityBuilder:
+
+    @property
+    def build(self):
+        return None
+
+
+class TagBuilder:
+
+    @property
+    def build(self):
+        return None
+
+
+class ExternalDocBuilder:
+
+    @property
+    def build(self):
+        return None
+
+
 class OpenApiBuilder:
 
     schema = OpenApiObject
@@ -300,6 +397,10 @@ class OpenApiBuilder:
         self.info = InfoBuilder()
         self.server = ServerBuilder()
         self.path = PathsBuilder()
+        self.component = ComponentBuilder()
+        self.security = SecurityBuilder()
+        self.tag = TagBuilder()
+        self.external_doc = ExternalDocBuilder()
 
         self._build = None
 
@@ -312,7 +413,11 @@ class OpenApiBuilder:
             openapi=self.version,
             info=self.info.build,
             servers=self.server.build,
-            paths=self.path.build
+            paths=self.path.build,
+            components=self.component.build,
+            security=self.security.build,
+            tags=self.tag.build,
+            external_docs=self.external_doc.build
         )
 
         self._build = build
@@ -333,7 +438,7 @@ class Info:
 @open_bldr.path
 class Path1:
 
-    path = '/users'
+    path = '/users/{id:Int64}'
 
     responses = [
         Response(status=200, description="ok"),
@@ -344,6 +449,7 @@ class Path1:
         content=[JSONMediaType(Int64)]
     )
 
+    @open_bldr.path.op(summary="Some summary for the get")
     @open_bldr.path.query_param(name='id', schema=Int64, required=True)
     def get(self) -> Op[..., responses]:
         """Get request for path."""

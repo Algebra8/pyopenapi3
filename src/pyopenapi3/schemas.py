@@ -693,10 +693,14 @@ class ParameterObject(Schema):
         has_content = 'content' in v
         has_schema = 'schema' in v
 
-        if (has_content and has_schema) or not (has_content or has_schema):
+        neither = not (has_content or has_schema)
+        both = has_content and has_schema
+
+        if both or neither:
             raise ValueError(
                 "A parameter MUST contain either a schema property, "
-                "or a content property, but not both. See https://"
+                "or a content property, but not both. You provided "
+                f"{'neither' if neither else 'both'}. See https://"
                 "swagger.io/specification/#parameter-object for more"
                 " info."
             )
