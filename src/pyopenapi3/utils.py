@@ -112,7 +112,7 @@ def format_description(s: Optional[str]) -> Optional[str]:
 
 
 def parse_name_and_type_from_fmt_str(
-        formatted_str) -> Generator[Tuple[str, Type[DTSchema]]]:
+        formatted_str) -> Generator[Tuple[str, Type[Field]]]:
     """
     Parse a formatted string and return the names
     of the args and their types.
@@ -124,7 +124,7 @@ def parse_name_and_type_from_fmt_str(
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
-                yield arg_name, ObjectToDTSchema(_type_name)
+                yield arg_name, getattr(pyopenapi3.objects, _type_name)
             except AttributeError:
                 raise ValueError(
                     "A non-`Field` or `OpenApiObject` type was found. "

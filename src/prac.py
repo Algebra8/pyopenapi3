@@ -14,6 +14,7 @@ from pyopenapi3.utils import (
 from pyopenapi3.objects import (
     Int64,
     String,
+    Email,
     Response,
     RequestBody,
     Op,
@@ -450,7 +451,7 @@ class Path1:
     )
 
     @open_bldr.path.op(summary="Some summary for the get")
-    @open_bldr.path.query_param(name='id', schema=Int64, required=True)
+    @open_bldr.path.query_param(name='email', schema=Email, required=True)
     def get(self) -> Op[..., responses]:
         """Get request for path."""
 
