@@ -32,7 +32,8 @@ from pyopenapi3.schemas import (
     ServerObject,
     ComponentsObject,
     ReferenceObject,
-    ObjectsDTSchema
+    ObjectsDTSchema,
+    SchemaObject
 )
 
 
@@ -634,6 +635,15 @@ class Customer:
     @component.schema_field
     def email(self) -> Email:
         """An email for the customer"""
+
+
+@component.schema
+class Store:
+    """An online store for selling animal stuff"""
+
+    @component.schema_field
+    def customer(self) -> Customer:
+        """The customer that entered the store."""
 
 
 import ruamel.yaml as yaml

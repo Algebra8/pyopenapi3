@@ -156,7 +156,7 @@ class DTSchema(SchemaObject):
 class ObjectsDTSchema(DTSchema):
 
     type: str = Field('object', const=True)
-    properties: Dict[str, SchemaObject]
+    properties: Dict[str, Union[ReferenceObject, SchemaObject]]
 
 
 class PrimitiveDTSchema(DTSchema):
