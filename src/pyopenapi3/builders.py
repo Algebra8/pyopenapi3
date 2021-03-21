@@ -206,6 +206,7 @@ class OperationBuilder:
             self._attrs[method] = builds
 
         BuilderBus.operations[method] = OperationObject(
+            description=format_description(method.__doc__),
             **self._attrs[method],
         )
 

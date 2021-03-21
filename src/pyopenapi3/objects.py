@@ -227,7 +227,7 @@ class Response(OpenApiObject):
 
     status: int
     description: str
-    content: Optional[Dict[str, Any]] = None
+    content: Optional[List[Union[MediaType, Any]]] = None
     headers: Optional[Any] = None
     links: Optional[Any] = None
 
