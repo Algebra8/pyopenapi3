@@ -401,9 +401,11 @@ class ComponentBuilder:
         self._field_builds = {}
 
         # Parameter builds
+        # TODO parameters building for Comps
         self._parameter_builds = {}
 
         # Example builds
+        # TODO example building for Comps
         self._examples_builds = {}
 
         # Request Bodies interface and builds.
@@ -412,15 +414,19 @@ class ComponentBuilder:
         self._rqbody_bldr = RequestBodyBuilder()
 
         # Headers builds
+        # TODO headers building for Comps
         self._headers_builds = {}
 
         # Security schemes builds
+        # TODO sec schemes building for Comps
         self._security_schemes_builds = {}
 
         # Links builds
+        # TODO links building for Comps
         self._links_builds = {}
 
         # Callbacks builds
+        # TODO callbacks building for Comps
         self._callbacks_builds = {}
 
         self._build = None
@@ -455,6 +461,7 @@ class ComponentBuilder:
 
     @property
     def build(self):
+        # TODO allow returning None
         if self._build is None:
             self._build = ComponentsObject(
                 schemas=self._schema_builds,
