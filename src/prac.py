@@ -9,7 +9,8 @@ from pyopenapi3.utils import (
     build_mediatype_schema_from_content,
     create_schema,
     format_description,
-    parse_name_and_type_from_fmt_str
+    parse_name_and_type_from_fmt_str,
+    inject_component
 )
 from pyopenapi3.objects import (
     Int64,
@@ -29,7 +30,9 @@ from pyopenapi3.schemas import (
     OpenApiObject,
     InfoObject,
     ServerObject,
-    ComponentsObject
+    ComponentsObject,
+    ReferenceObject,
+    ObjectsDTSchema
 )
 
 
@@ -68,22 +71,30 @@ class BuilderBus:
 
 class RequestBodyBuilder:
 
-    schema = RequestBodyObject
+    _field_keys = RequestBodyObject.__fields__.keys()
 
     def __call__(
-            self,
-            rqbody: Union[RequestBody, Dict[str, Any], Any],
-            sub=None
+            self, cls=None, /, *,
+            request_body: Optional[
+                Union[RequestBody, Dict[str, Any], Any]
+            ] = None,
+            sub: Optional[Any] = None
     ) -> None:
-        if rqbody in [..., None]:
+        if cls is not None:
+            rqbody_attrs = {name: attr for name, attr in cls.__dict__.items()
+                            if name in self._field_keys}
+            self.__call__(request_body=rqbody_attrs, sub=cls)
+            return cls
+
+        if request_body in [..., None]:
             return
 
-        if isinstance(rqbody, RequestBody):
-            rqbody = rqbody.as_dict()
+        if isinstance(request_body, RequestBody):
+            request_body = request_body.as_dict()
 
-        content = build_mediatype_schema_from_content(rqbody['content'])
-        description = rqbody['description']
-        required = rqbody['required']
+        content = build_mediatype_schema_from_content(request_body['content'])
+        description = request_body.get('description')
+        required = request_body.get('required')
 
         BuilderBus.request_bodies[sub] = RequestBodyObject(
             content=content,
@@ -98,8 +109,8 @@ class ResponseBuilder:
 
     def __call__(
             self, cls=None, /, *,
-            responses: List[Union[Response, Dict[str, Any]]] = None,
-            sub=None
+            responses: Optional[List[Union[Response, Dict[str, Any]]]] = None,
+            sub: Optional[Any] = None
     ):
         if cls is not None:
             # A single response class.
@@ -172,7 +183,7 @@ class OperationBuilder:
             # TODO Error handling
             raise ValueError("GET operation cannot have a requestBody.")
 
-        self._rqbody_bldr(request_body, method)
+        self._rqbody_bldr(request_body=request_body, sub=method)
         self._resp_bldr(responses=responses, sub=method)
 
         builds = {
@@ -384,13 +395,16 @@ class ComponentBuilder:
 
     def __init__(self):
 
-        # Response builds
+        # Response interface and builds.
         self.response = self._responses
         self._response_builds = {}
         self._resp_bldr = ResponseBuilder()
 
-        # Schema builds
+        # Schema interface and builds.
+        self.schema = self.__call__
         self._schema_builds = {}
+        self.schema_field = self._field
+        self._field_builds = {}
 
         # Parameter builds
         self._parameter_builds = {}
@@ -398,8 +412,10 @@ class ComponentBuilder:
         # Example builds
         self._examples_builds = {}
 
-        # Request Bodies builds
+        # Request Bodies interface and builds.
+        self.request_body = self._request_bodies
         self._request_bodies_builds = {}
+        self._rqbody_bldr = RequestBodyBuilder()
 
         # Headers builds
         self._headers_builds = {}
@@ -415,21 +431,47 @@ class ComponentBuilder:
 
         self._build = None
 
+    def __call__(self, cls):
+        properties = {}
+        for _f, props in self._field_builds.items():
+            _type = get_type_hints(_f, localns=cls.__dict__)['return']
+            schema = create_schema(
+                _type, description=format_description(_f.__doc__),
+                **props
+            )
+            properties[_f.__name__] = schema
+
+        self._schema_builds[cls.__name__] = ObjectsDTSchema(
+            properties=properties
+        )
+
+        injected_comp_cls = inject_component(cls)
+        return injected_comp_cls
+
+    def _field(self, func=None, /, **kwargs):
+        if func is not None:
+            self._field_builds[func] = {}
+            return func
+
+        def wrapper(_f):
+            self._field_builds[_f] = kwargs
+            return _f
+
+        return wrapper
+
     @property
     def build(self):
         if self._build is None:
             self._build = ComponentsObject(
-                **{
-                    'schemas': self._schema_builds,
-                    'responses': self._response_builds,
-                    'parameters': self._parameter_builds,
-                    'examples': self._examples_builds,
-                    'request_bodies': self._request_bodies_builds,
-                    'headers': self._headers_builds,
-                    'security_schemes': self._security_schemes_builds,
-                    'links': self._links_builds,
-                    'callbacks': self._callbacks_builds
-                }
+                schemas=self._schema_builds,
+                responses=self._response_builds,
+                parameters=self._parameter_builds,
+                examples=self._examples_builds,
+                request_bodies=self._request_bodies_builds,
+                headers=self._headers_builds,
+                security_schemes=self._security_schemes_builds,
+                links=self._links_builds,
+                callbacks=self._callbacks_builds
             )
         return self._build
 
@@ -439,6 +481,13 @@ class ComponentBuilder:
         while responses:
             _, response = responses.popleft()
             self._response_builds[cls.__name__] = response
+
+    def _request_bodies(self, cls):
+        self._rqbody_bldr(cls)
+        rqbodies = BuilderBus.request_bodies[cls]
+        while rqbodies:
+            rqbody = rqbodies.popleft()
+            self._request_bodies_builds[cls.__name__] = rqbody
 
 
 class SecurityBuilder:
@@ -569,6 +618,22 @@ class IllegalInput:
 class GeneralError:
 
     description = "General Error"
+
+
+component = open_bldr.component
+
+
+@component.schema
+class Customer:
+    """An api for a customer of the store."""
+
+    @component.schema_field(read_only=True)
+    def id(self) -> Int64:
+        """A unique identifier for the customer."""
+
+    @component.schema_field
+    def email(self) -> Email:
+        """An email for the customer"""
 
 
 import ruamel.yaml as yaml

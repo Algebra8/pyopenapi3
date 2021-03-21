@@ -45,7 +45,8 @@ from .schemas import (
     MediaTypeEnum,
     AnyTypeArrayDTSchema,
     MixedTypeArrayDTSchema,
-    MediaTypeObject
+    MediaTypeObject,
+    SchemaObject
 )
 
 
@@ -149,7 +150,7 @@ def mark_component_and_attach_schema(obj, schema):
 def create_schema(
         __type: Type[OpenApiObject],
         **kwargs: Any
-) -> Schema:
+) -> Union[SchemaObject, ReferenceObject]:
     if issubclass(__type, Component):
         return convert_objects_to_schema(__type)
     elif issubclass(__type, Primitive):
@@ -193,11 +194,7 @@ def convert_array_to_schema(
 
 
 def build_property_schema_from_func(
-        f: Callable, *,
-        # `read_only` and `example` are
-        # inputted from the user directly.
-        read_only: Optional[bool],
-        example: Optional[Any],
+        f: Callable, **kwargs
 ) -> Schema:
     """Convert data on a custom object's method to a `Field`
     or `Component` schema and return its Open API representation,
@@ -211,10 +208,7 @@ def build_property_schema_from_func(
 
     schema = create_schema(
         property_type, description=format_description(description),
-        read_only=read_only, example=example,
-        # If a custom object is found here, then it
-        # should only be referenced.
-        is_reference=True
+        **kwargs
     )
 
     return schema
