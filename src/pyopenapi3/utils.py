@@ -18,16 +18,12 @@ import inspect
 
 from .objects import (
     Number,
-    String,
-    Boolean,
-    Integer,
     Array,
     Field,
-    is_arb_type,
     Primitive,
     Component,
-    OpenApiObject, Email, Float, Double, Int32, Int64,
-    Date, DateTime, Byte, Binary, Password, MediaType
+    OpenApiObject,
+    MediaType
 )
 import pyopenapi3.objects
 from .schemas import (
@@ -36,10 +32,8 @@ from .schemas import (
     Int64DTSchema, NumberDTSchema, FloatDTSchema, DoubleDTSchema,
     EmailDTSchema,
     BoolDTSchema, ArrayDTSchema,
-    ComponentsObject,
     ReferenceObject,
     PrimitiveDTSchema,
-    ObjectsDTSchema,
     DTSchema,
     Schema,
     MediaTypeEnum,
@@ -191,27 +185,6 @@ def convert_array_to_schema(
             return schema_type(items=items, **kwargs)
         else:
             return schema_type(items=sub_schemas[0], **kwargs)
-
-
-def build_property_schema_from_func(
-        f: Callable, **kwargs
-) -> Schema:
-    """Convert data on a custom object's method to a `Field`
-    or `Component` schema and return its Open API representation,
-    i.e. {name: schema}.
-    """
-    if not hasattr(f, '__annotations__'):
-        raise ValueError("Must include 'return' annotations.")
-
-    property_type = f.__annotations__['return']
-    description = f.__doc__
-
-    schema = create_schema(
-        property_type, description=format_description(description),
-        **kwargs
-    )
-
-    return schema
 
 
 def inject_component(cls):
