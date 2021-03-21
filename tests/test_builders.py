@@ -215,12 +215,11 @@ def test_components_builder():
         description = "General Error"
         content = [JSONMediaType(GeneralError)]
 
-
     schemas = comp.build.schemas
     example_schemas = component_examples.component['components']['schemas']
+    assert schemas == example_schemas
 
-    # for schema in example_schemas:
-        # assert schemas[schema].dict() == example_schemas[schema]
-    # assert schemas['GeneralError'] == example_schemas['GeneralError']
-    # assert schemas['Category'] == example_schemas['Category']
-    print(schemas['Category'].dict())
+    responses = comp.build.responses
+    example_responses = component_examples.component['components']['responses']
+    assert responses == example_responses
+
