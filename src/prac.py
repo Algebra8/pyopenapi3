@@ -28,7 +28,8 @@ from pyopenapi3.schemas import (
     PathItemObject,
     OpenApiObject,
     InfoObject,
-    ServerObject
+    ServerObject,
+    ComponentsObject
 )
 
 
@@ -93,17 +94,34 @@ class RequestBodyBuilder:
 
 class ResponseBuilder:
 
-    def __call__(self, responses: List[Response], sub=None):
+    _field_keys = ResponseObject.__fields__.keys()
+
+    def __call__(
+            self, cls=None, /, *,
+            responses: List[Union[Response, Dict[str, Any]]] = None,
+            sub=None
+    ):
+        if cls is not None:
+            # A single response class.
+            resp_attrs = {name: attr for name, attr in cls.__dict__.items()
+                          if name in self._field_keys}
+            self.__call__(responses=[resp_attrs], sub=cls)
+            return cls
+
+        assert responses is not None
+        assert sub is not None
         for response in responses:
             if isinstance(response, Response):
                 _response = response.as_dict()
             else:
                 _response = response
-            content = build_mediatype_schema_from_content(_response['content'])
+            content = build_mediatype_schema_from_content(
+                _response.get('content')
+            )
             _response['content'] = content
 
             BuilderBus.responses[sub] = (
-                _response['status'],
+                _response.get('status'),
                 ResponseObject(**_response)
             )
 
@@ -155,7 +173,7 @@ class OperationBuilder:
             raise ValueError("GET operation cannot have a requestBody.")
 
         self._rqbody_bldr(request_body, method)
-        self._resp_bldr(responses, method)
+        self._resp_bldr(responses=responses, sub=method)
 
         builds = {
             'responses': {},
@@ -362,9 +380,65 @@ class ServerBuilder:
 
 class ComponentBuilder:
 
+    schema = ComponentsObject
+
+    def __init__(self):
+
+        # Response builds
+        self.response = self._responses
+        self._response_builds = {}
+        self._resp_bldr = ResponseBuilder()
+
+        # Schema builds
+        self._schema_builds = {}
+
+        # Parameter builds
+        self._parameter_builds = {}
+
+        # Example builds
+        self._examples_builds = {}
+
+        # Request Bodies builds
+        self._request_bodies_builds = {}
+
+        # Headers builds
+        self._headers_builds = {}
+
+        # Security schemes builds
+        self._security_schemes_builds = {}
+
+        # Links builds
+        self._links_builds = {}
+
+        # Callbacks builds
+        self._callbacks_builds = {}
+
+        self._build = None
+
     @property
     def build(self):
-        return None
+        if self._build is None:
+            self._build = ComponentsObject(
+                **{
+                    'schemas': self._schema_builds,
+                    'responses': self._response_builds,
+                    'parameters': self._parameter_builds,
+                    'examples': self._examples_builds,
+                    'request_bodies': self._request_bodies_builds,
+                    'headers': self._headers_builds,
+                    'security_schemes': self._security_schemes_builds,
+                    'links': self._links_builds,
+                    'callbacks': self._callbacks_builds
+                }
+            )
+        return self._build
+
+    def _responses(self, cls):
+        self._resp_bldr(cls)
+        responses = BuilderBus.responses[cls]
+        while responses:
+            _, response = responses.popleft()
+            self._response_builds[cls.__name__] = response
 
 
 class SecurityBuilder:
@@ -478,6 +552,23 @@ class Path2:
     def post(self) -> Op[request_body, responses]:
         """Get request for path."""
 
+
+@open_bldr.component.response
+class NotFound:
+
+    description = "Entity not found"
+
+
+@open_bldr.component.response
+class IllegalInput:
+
+    description = "Illegal input for operation"
+
+
+@open_bldr.component.response
+class GeneralError:
+
+    description = "General Error"
 
 
 import ruamel.yaml as yaml

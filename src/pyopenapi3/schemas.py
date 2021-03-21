@@ -262,57 +262,6 @@ class SecuritySchemeObject(Schema):
     ...
 
 
-class ComponentsObject(Schema):
-    """Schema for a Components Object.
-
-    Holds a set of reusable objects for different aspects of the OAS.
-    As described in https://swagger.io/specification/#components-object.
-
-    All objects defined within the components object will have no effect
-    on the API unless they are explicitly referenced from properties
-    outside the components object. Note `ReferenceObject` for referencing.
-    """
-
-    # An object to hold reusable Schema Objects.
-    schemas: Optional[Dict[str, Union[SchemaObject, ReferenceObject]]]
-
-    # An object to hold reusable Response Objects.
-    responses: Optional[Dict[str, Union[ResponseObject, ReferenceObject]]]
-
-    # An object to hold reusable Parameter Objects.
-    parameters: Optional[Dict[str, Union[ParameterObject, ReferenceObject]]]
-
-    # An object to hold reusable Example Objects.
-    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
-
-    # An object to hold reusable Request Body Objects.
-    request_bodies: Optional[
-        Dict[str, Union[RequestBodyObject, ReferenceObject]]
-    ] = Field(None, alias='requestBodies')
-
-    # An object to hold reusable Header Objects.
-    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
-
-    # An object to hold reusable Security Scheme Objects.
-    security_schemes: Optional[
-        Dict[str, Union[SecuritySchemeObject, ReferenceObject]]
-    ] = Field(None, alias='securitySchemes')
-
-    # An object to hold reusable Link Objects.
-    links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
-
-    # An object to hold reusable Callback Objects.
-    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
-
-
-FieldSchema = Union[
-    DTSchema,
-    ArrayDTSchema,
-    ComponentsObject,
-    ReferenceObject
-]
-
-
 # Info metadata schemas.
 class ContactObject(Schema):
     """Schema for a Contact Object.
@@ -931,6 +880,49 @@ class TagObject(Schema):
     # Additional external documentation for this tag.
     external_docs: Optional[ExternalDocObject] = Field(None,
                                                        alias='externalDocs')
+
+
+class ComponentsObject(Schema):
+    """Schema for a Components Object.
+
+    Holds a set of reusable objects for different aspects of the OAS.
+    As described in https://swagger.io/specification/#components-object.
+
+    All objects defined within the components object will have no effect
+    on the API unless they are explicitly referenced from properties
+    outside the components object. Note `ReferenceObject` for referencing.
+    """
+
+    # An object to hold reusable Schema Objects.
+    schemas: Optional[Dict[str, Union[SchemaObject, ReferenceObject]]]
+
+    # An object to hold reusable Response Objects.
+    responses: Optional[Dict[str, Union[ResponseObject, ReferenceObject]]]
+
+    # An object to hold reusable Parameter Objects.
+    parameters: Optional[Dict[str, Union[ParameterObject, ReferenceObject]]]
+
+    # An object to hold reusable Example Objects.
+    examples: Optional[Dict[str, Union[ExampleObject, ReferenceObject]]]
+
+    # An object to hold reusable Request Body Objects.
+    request_bodies: Optional[
+        Dict[str, Union[RequestBodyObject, ReferenceObject]]
+    ] = Field(None, alias='requestBodies')
+
+    # An object to hold reusable Header Objects.
+    headers: Optional[Dict[str, Union[HeaderObject, ReferenceObject]]]
+
+    # An object to hold reusable Security Scheme Objects.
+    security_schemes: Optional[
+        Dict[str, Union[SecuritySchemeObject, ReferenceObject]]
+    ] = Field(None, alias='securitySchemes')
+
+    # An object to hold reusable Link Objects.
+    links: Optional[Dict[str, Union[LinkObject, ReferenceObject]]]
+
+    # An object to hold reusable Callback Objects.
+    callbacks: Optional[Dict[str, Union[CallbackObject, ReferenceObject]]]
 
 
 class OpenApiObject(Schema):
