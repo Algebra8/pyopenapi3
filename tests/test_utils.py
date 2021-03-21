@@ -140,7 +140,7 @@ def test_parse_name_and_type():
     parsed_gen = parse_name_and_type_from_fmt_str(fmt_str)
 
     _id = next(parsed_gen)
-    assert _id == ("id", Int64DTSchema)
+    assert _id == ("id", Int64)
 
     email = next(parsed_gen)
-    assert email == ("email", EmailDTSchema)
+    assert email == ("email", Email)
