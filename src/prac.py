@@ -31,9 +31,9 @@ from pyopenapi3.schemas import (
     InfoObject,
     ServerObject,
     ComponentsObject,
-    ReferenceObject,
     ObjectsDTSchema,
-    SchemaObject
+    TagObject,
+    ExternalDocObject
 )
 
 
@@ -491,6 +491,7 @@ class ComponentBuilder:
             self._request_bodies_builds[cls.__name__] = rqbody
 
 
+# TODO Security Requirement Object.
 class SecurityBuilder:
 
     @property
@@ -500,16 +501,44 @@ class SecurityBuilder:
 
 class TagBuilder:
 
+    schema = TagObject
+    _field_keys = TagObject.__fields__.keys()
+
+    def __init__(self):
+        self._builds = []
+
+    def __call__(self, cls):
+        tag_object = self.schema(
+            **{k: v for k, v in cls.__dict__.items()
+               if k in self._field_keys}
+        )
+        self._builds.append(tag_object)
+
+        return cls
+
     @property
     def build(self):
-        return None
+        return self._builds or None
 
 
 class ExternalDocBuilder:
 
+    schema = ExternalDocObject
+    _field_keys = ExternalDocObject.__fields__.keys()
+
+    def __init__(self):
+        self._build = None
+
+    def __call__(self, cls):
+        exdoc = self.schema(
+            **{k: v for k, v in cls.__dict__.items()
+               if k in self._field_keys}
+        )
+        self._build = exdoc
+
     @property
     def build(self):
-        return None
+        return self._build
 
 
 class OpenApiBuilder:
@@ -531,22 +560,19 @@ class OpenApiBuilder:
 
     @property
     def build(self):
-        if self._build is not None:
-            return self._build
+        if self._build is None:
+            self._build = self.schema(
+                openapi=self.version,
+                info=self.info.build,
+                servers=self.server.build,
+                paths=self.path.build,
+                components=self.component.build,
+                security=self.security.build,
+                tags=self.tag.build,
+                external_docs=self.external_doc.build
+            )
 
-        build = self.schema(
-            openapi=self.version,
-            info=self.info.build,
-            servers=self.server.build,
-            paths=self.path.build,
-            components=self.component.build,
-            security=self.security.build,
-            tags=self.tag.build,
-            external_docs=self.external_doc.build
-        )
-
-        self._build = build
-        return build
+        return self._build
 
 
 open_bldr = OpenApiBuilder()
