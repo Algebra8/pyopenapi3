@@ -25,6 +25,7 @@ setup(
     url='https://github.com/Algebra8/pyopenapi3',
     author='Milad M. Nasr',
     author_email='milad.m.nasr@gmail.com',
+    package_dir={'': 'src'},
     packages=find_packages(where='src', exclude=['tests', 'examples']),
     python_requires='>=3.7',
     install_requires=[
