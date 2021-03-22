@@ -647,3 +647,9 @@ class OpenApiBuilder:
                 Dumper=yaml.RoundTripDumper
             )
 
+    def dict(self):
+        return self.build.dict()
+
+    def json(self, *args, **kwargs):
+        return self.build.json(*args, **kwargs)
+
