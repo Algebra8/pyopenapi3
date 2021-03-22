@@ -61,6 +61,7 @@ class BuilderBus:
     parameters = Bus('parameters')
     path_items = Bus('path_items')
     paths = Bus('paths')
+    schema_fields = Bus('schema_fields')
 
 
 class RequestBodyBuilder:
@@ -206,6 +207,7 @@ class OperationBuilder:
             self._attrs[method] = builds
 
         BuilderBus.operations[method] = OperationObject(
+            description=format_description(method.__doc__),
             **self._attrs[method],
         )
 
@@ -265,6 +267,9 @@ class PathItemBuilder:
 
 class ParamBuilder:
 
+    _field_keys = set(ParameterObject.__fields__.keys())
+    _field_keys.add('schema')
+
     def __init__(self, __in):
         self.__in = __in
 
@@ -283,6 +288,17 @@ class ParamBuilder:
             content = kwargs.pop('content')
             kwargs['content'] = build_mediatype_schema_from_content(content)
         return ParameterObject(in_field=self.__in, **kwargs)
+
+    @classmethod
+    def build_param_from_cls(cls, _cls):
+        kwargs = {k: v for k, v in _cls.__dict__.items()
+                  if k in cls._field_keys}
+        if 'in_field' not in kwargs:
+            raise ValueError(
+                f"Need to include `in_field` on Parameter "
+                f"class {_cls.__name__}."
+            )
+        return cls(kwargs.pop('in_field')).build_param(**kwargs)
 
 
 class PathsBuilder:
@@ -398,10 +414,14 @@ class ComponentBuilder:
         self.schema = self.__call__
         self._schema_builds = {}
         self.schema_field = self._field
-        self._field_builds = {}
+        # A set of functions that were marked as fields for an
+        # ObjectSchema that will be used to build the properties
+        # of said ObjectSchema.
+        self._fields_used = set()
 
         # Parameter builds
         # TODO parameters building for Comps
+        self.parameter = self._parameters
         self._parameter_builds = {}
 
         # Example builds
@@ -433,7 +453,8 @@ class ComponentBuilder:
 
     def __call__(self, cls):
         properties = {}
-        for _f, props in self._field_builds.items():
+        for _f in self._fields_used:
+            props = BuilderBus.schema_fields[_f].popleft()
             _type = get_type_hints(_f, localns=cls.__dict__)['return']
             schema = create_schema(
                 _type, description=format_description(_f.__doc__),
@@ -441,23 +462,40 @@ class ComponentBuilder:
             )
             properties[_f.__name__] = schema
 
+        # Flush the fields used.
+        self._fields_used = set()
+
         self._schema_builds[cls.__name__] = ObjectsDTSchema(
             properties=properties
         )
 
+        # Flush functions that were used to build this ObjectSchema.
+        self._field_builds = {}
+
         injected_comp_cls = inject_component(cls)
         return injected_comp_cls
 
-    def _field(self, func=None, /, **kwargs):
-        if func is not None:
-            self._field_builds[func] = {}
-            return func
-
-        def wrapper(_f):
-            self._field_builds[_f] = kwargs
-            return _f
-
-        return wrapper
+    def _parameters(self, cls=None, /, *, as_dict=None):
+        if cls is not None:
+            self._parameter_builds[cls.__name__] = \
+                ParamBuilder.build_param_from_cls(cls)
+            return cls
+        if as_dict is None:
+            raise ValueError(
+                "When not using the Components' parameter builder as a "
+                "decorator, pass in a dict for the `as_dict` argument."
+            )
+        for param in as_dict:
+            param_attrs = as_dict[param]
+            if 'in_field' not in param_attrs:
+                raise ValueError(
+                    "Each parameter object must contain an `in_field` key "
+                    "that is equivalent to Open API's 'in' property for "
+                    "parameters."
+                )
+            in_field = param_attrs.pop('in_field')
+            self._parameter_builds[param] = \
+                ParamBuilder(in_field).build_param(**param_attrs)
 
     @property
     def build(self):
@@ -489,6 +527,31 @@ class ComponentBuilder:
         while rqbodies:
             rqbody = rqbodies.popleft()
             self._request_bodies_builds[cls.__name__] = rqbody
+
+    def _field(self, func=None, /, **kwargs):
+
+        if func is not None:
+            BuilderBus.schema_fields[func] = {}
+            self._fields_used.add(func)
+            return func
+
+        # Note, there is no good reason for why we can't just dump
+        # the functions and any attrs (i.e. {} or kwargs), onto a
+        # dict hosted by ComponentsBuilder, and flushing the dict
+        # after using it (note this is important, or else fields on
+        # older components will be used for the current iteration).
+        #
+        # However, by using BuilderBus, we can try to piece out some
+        # patterns to generalize this methodology. It may also read
+        # easier for any other dev since it does match the pattern we've
+        # been using thus far.
+
+        def wrapper(_f):
+            BuilderBus.schema_fields[_f] = kwargs
+            self._fields_used.add(_f)
+            return _f
+
+        return wrapper
 
 
 # TODO Security Requirement Object.

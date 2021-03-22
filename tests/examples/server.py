@@ -1,4 +1,14 @@
 
+
+default_server = {
+  'servers': [
+    {
+      'url': '/',
+      'description': 'Default server'
+    }
+  ]
+}
+
 single_server = {
   "servers": [
     {

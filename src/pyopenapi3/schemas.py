@@ -240,7 +240,7 @@ class BoolDTSchema(PrimitiveDTSchema):
 class ArrayDTSchema(DTSchema):
 
     type: str = Field("array", const=True)
-    items: SchemaObject
+    items: Union[ReferenceObject, SchemaObject]
 
 
 class AnyTypeArrayDTSchema(ArrayDTSchema):
@@ -366,7 +366,7 @@ class ServerObject(Schema):
     """
 
     # A URL to the target host.
-    url: Optional[Path]
+    url: Optional[Union[VariableAnyUrl, Path]]  # Path allows '/' for default
 
     # An optional string describing the host designated by the URL.
     description: Optional[str]
