@@ -215,11 +215,38 @@ def test_components_builder():
         description = "General Error"
         content = [JSONMediaType(GeneralError)]
 
+    @comp.parameter
+    class skipParam:
+
+        name = "skip"
+        in_field = "query"
+        description = "number of items to skip"
+        required = True
+        schema = Int32
+
+    @comp.parameter
+    class limitParam:
+
+        name = "limit"
+        in_field = "query"
+        description = "max records to return"
+        required = True
+        schema = Int32
+
+    example_components = component_examples.component['components']
+
     schemas = comp.build.schemas
-    example_schemas = component_examples.component['components']['schemas']
+    example_schemas = example_components['schemas']
     assert schemas == example_schemas
 
     responses = comp.build.responses
-    example_responses = component_examples.component['components']['responses']
+    example_responses = example_components['responses']
     assert responses == example_responses
+
+    parameters = comp.build.parameters
+    example_parameters = example_components['parameters']
+    assert parameters == example_parameters
+
+    # TODO add tests for Security Scheme Object.
+
 

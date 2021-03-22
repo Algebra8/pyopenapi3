@@ -267,6 +267,9 @@ class PathItemBuilder:
 
 class ParamBuilder:
 
+    _field_keys = set(ParameterObject.__fields__.keys())
+    _field_keys.add('schema')
+
     def __init__(self, __in):
         self.__in = __in
 
@@ -285,6 +288,17 @@ class ParamBuilder:
             content = kwargs.pop('content')
             kwargs['content'] = build_mediatype_schema_from_content(content)
         return ParameterObject(in_field=self.__in, **kwargs)
+
+    @classmethod
+    def build_param_from_cls(cls, _cls):
+        kwargs = {k: v for k, v in _cls.__dict__.items()
+                  if k in cls._field_keys}
+        if 'in_field' not in kwargs:
+            raise ValueError(
+                f"Need to include `in_field` on Parameter "
+                f"class {_cls.__name__}."
+            )
+        return cls(kwargs.pop('in_field')).build_param(**kwargs)
 
 
 class PathsBuilder:
@@ -463,10 +477,25 @@ class ComponentBuilder:
 
     def _parameters(self, cls=None, /, *, as_dict=None):
         if cls is not None:
-
+            self._parameter_builds[cls.__name__] = \
+                ParamBuilder.build_param_from_cls(cls)
             return cls
-
-
+        if as_dict is None:
+            raise ValueError(
+                "When not using the Components' parameter builder as a "
+                "decorator, pass in a dict for the `as_dict` argument."
+            )
+        for param in as_dict:
+            param_attrs = as_dict[param]
+            if 'in_field' not in param_attrs:
+                raise ValueError(
+                    "Each parameter object must contain an `in_field` key "
+                    "that is equivalent to Open API's 'in' property for "
+                    "parameters."
+                )
+            in_field = param_attrs.pop('in_field')
+            self._parameter_builds[param] = \
+                ParamBuilder(in_field).build_param(**param_attrs)
 
     @property
     def build(self):
