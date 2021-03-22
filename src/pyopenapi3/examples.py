@@ -73,7 +73,7 @@ component = open_bldr.component
 
 @component.schema
 class Customer:
-    """A SeeTickets customer"""
+    """A store's customer"""
 
     @component.schema_field(read_only=True)
     def id(self) -> Int64:
