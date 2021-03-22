@@ -249,7 +249,9 @@ class AnyTypeArrayDTSchema(ArrayDTSchema):
 
 class _OneOf(SchemaObject):
 
-    one_of: List[SchemaObject] = Field(..., alias='oneOf')
+    one_of: List[
+        Union[ReferenceObject, SchemaObject]
+    ] = Field(..., alias='oneOf')
 
 
 class MixedTypeArrayDTSchema(ArrayDTSchema):
