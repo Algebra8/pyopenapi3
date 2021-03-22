@@ -1,5 +1,4 @@
-from typing import Iterable, Any, Optional, Dict, List, Tuple, Union, Type
-import functools
+from typing import Iterable, Any, Optional, List, Union
 from dataclasses import dataclass, asdict
 
 from .types import MediaTypeEnum

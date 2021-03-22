@@ -7,7 +7,6 @@ from typing import (
     Type,
     Tuple,
     cast,
-    Callable,
     Dict,
     List,
     Generator,
@@ -35,7 +34,6 @@ from .schemas import (
     ReferenceObject,
     PrimitiveDTSchema,
     DTSchema,
-    Schema,
     MediaTypeEnum,
     AnyTypeArrayDTSchema,
     MixedTypeArrayDTSchema,
@@ -73,9 +71,6 @@ class _ObjectToDTSchema:
     SingleArray = ArrayDTSchema
     MixedTypeArray = MixedTypeArrayDTSchema
     AnyTypeArray = AnyTypeArrayDTSchema
-
-    # Objects
-    Component = ReferenceObject
 
     def __call__(self, cls_or_name: Union[str, Type]) -> Type[DTSchema]:
         """Return the schema of a Data Type.
