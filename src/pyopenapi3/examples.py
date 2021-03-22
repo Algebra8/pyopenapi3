@@ -156,3 +156,49 @@ class limitParam:
     schema = Int32
 
 
+@open_bldr.server
+class Server1:
+    """A server with variables in it url."""
+
+    url = "https://{username}.gigantic-server.com:{port}/{basePath}"
+    description = "The production API server"
+    variables = {
+        "username": {
+            "default": "demo",
+            "description": (
+                "this value is assigned by the service provider, "
+                "in this example `gigantic-server.com`"
+            )
+        },
+        "port": {
+            "enum": [
+                "8443",
+                "443"
+            ],
+            "default": "8443"
+        },
+        "basePath": {"default": "v2"}
+    }
+
+
+# Demonstrate that multiple servers can be built.
+@open_bldr.server
+class DevServer:
+
+    url = "https://development.gigantic-server.com/v1"
+    description = "Development server"
+
+
+@open_bldr.server
+class StageServer:
+
+    url = "https://staging.gigantic-server.com/v1"
+    description = "Staging server"
+
+
+@open_bldr.server
+class ProdServer:
+
+    url = "https://api.gigantic-server.com/v1"
+    description = "Production server"
+
