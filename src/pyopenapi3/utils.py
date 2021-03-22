@@ -16,15 +16,19 @@ from string import Formatter
 import inspect
 
 from .objects import (
+    OpenApiObject,
+    MediaType
+)
+from .data_types import (
     Number,
     Array,
     Field,
     Primitive,
-    Component,
-    OpenApiObject,
-    MediaType
+    Component
 )
-import pyopenapi3.objects
+# Used to dynamically retrieve field in `parse_name_and_type
+# _from_fmt_str`
+import pyopenapi3.data_types
 from .schemas import (
     StringDTSchema, ByteDTSchema, BinaryDTSchema, DateDTSchema,
     DateTimeDTSchema, PasswordDTSchema, IntegerDTSchema, Int32DTSchema,
@@ -114,7 +118,7 @@ def parse_name_and_type_from_fmt_str(
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
-                yield arg_name, getattr(pyopenapi3.objects, _type_name)
+                yield arg_name, getattr(pyopenapi3.data_types, _type_name)
             except AttributeError:
                 raise ValueError(
                     "A non-`Field` or `OpenApiObject` type was found. "
