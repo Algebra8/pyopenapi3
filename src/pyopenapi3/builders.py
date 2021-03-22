@@ -3,8 +3,6 @@ from typing import get_type_hints, Union, List, Any, Dict, Optional
 from collections import deque
 import re
 
-import ruamel.yaml as yaml
-
 from pyopenapi3.utils import (
     build_mediatype_schema_from_content,
     create_schema,
@@ -638,14 +636,6 @@ class OpenApiBuilder:
             )
 
         return self._build
-
-    def yaml(self, fn):
-        with open(fn, 'w') as f:
-            yaml.dump(
-                self.build.dict(),
-                f,
-                Dumper=yaml.RoundTripDumper
-            )
 
     def dict(self):
         return self.build.dict()

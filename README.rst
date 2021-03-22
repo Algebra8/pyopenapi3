@@ -1,8 +1,7 @@
 ``pyopenapi3`` converts Python objects to the
 `OpenAPI 3 Specification <https://swagger.io/specification/>`_. It can be
 used to easily manage your API descriptions, particularly when using packages
-such as `connexion <https://connexion.readthedocs.io/en/latest/>`_. Try it out
-with `connexion` by running the Dockerfile, or take a peak at what can be done
+such as `connexion <https://connexion.readthedocs.io/en/latest/>`_. Take a peak at what can be done
 with the example below. More exhaustive examples can be found in
 `pyopenapi3/examples <https://github.com/Algebra8/pyopenapi3/tree/main/src/pyopenapi3/examples>`_.
 
@@ -89,91 +88,129 @@ with the example below. More exhaustive examples can be found in
         def anyArray(self) -> Array[...]:
             """An array that accepts anything"""
 
-    open_bldr.yaml('store.yml')
+    open_bldr.json(indent=2)
 
 This will result in the following yaml file:
 
 .. code-block::
 
-    openapi: 3.0.0
-    info:
-      title: Pet store api.
-      version: 0.0.1
-      description: A store for buying pets online.
-    servers:
-    - url: /
-      description: Default server
-    paths:
-      /users/{id}:
-        get:
-          summary: Some summary for the get
-          description: Get request for path.
-          parameters:
-          - name: email
-            in: query
-            required: true
-            schema:
-              type: string
-              format: email
-          responses:
-            '404':
-              description: not found
-            '200':
-              description: ok
-        parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-    components:
-      schemas:
-        Customer:
-          type: object
-          properties:
-            lastName:
-              type: string
-              description: Customer's last name
-              readOnly: true
-              example: Cat
-            id:
-              type: integer
-              description: Unique identifier for the customer
-              format: int64
-              readOnly: true
-            email:
-              type: string
-              description: Customer's email address
-              format: email
-              readOnly: true
-              example: some_user@gmail.com
-            firstName:
-              type: string
-              description: Customer's first name
-              readOnly: true
-              example: Mike
-        Store:
-          type: object
-          properties:
-            id:
-              type: integer
-              description: Store's unique identification number
-              format: int64
-              readOnly: true
-            someArray:
-              type: array
-              items:
-                oneOf:
-                - $ref: '#/components/schemas/Customer'
-                - type: integer
-                  format: int32
-              description: Just some array that can accept one of Customer or Int32
-            anyArray:
-              type: array
-              items: {}
-              description: An array that accepts anything
-            customer:
-              $ref: '#/components/schemas/Customer'
-
-
+    {
+      "openapi": "3.0.0",
+      "info": {
+        "title": "Pet store api.",
+        "version": "0.0.1",
+        "description": "A store for buying pets online."
+      },
+      "servers": [
+        {
+          "url": "/",
+          "description": "Default server"
+        }
+      ],
+      "paths": {
+        "/users/{id}": {
+          "get": {
+            "summary": "Some summary for the get",
+            "description": "Get request for path.",
+            "parameters": [
+              {
+                "name": "email",
+                "in_field": "query",
+                "required": true,
+                "schema_field": {
+                  "type": "string",
+                  "format": "email"
+                }
+              }
+            ],
+            "responses": {
+              "404": {
+                "description": "not found"
+              },
+              "200": {
+                "description": "ok"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "id",
+              "in_field": "path",
+              "required": true,
+              "schema_field": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          ]
+        }
+      },
+      "components": {
+        "schemas": {
+          "Customer": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Unique identifier for the customer",
+                "format": "int64",
+                "read_only": true
+              },
+              "email": {
+                "type": "string",
+                "description": "Customer's email address",
+                "format": "email",
+                "read_only": true,
+                "example": "some_user@gmail.com"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "Customer's first name",
+                "read_only": true,
+                "example": "Mike"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "Customer's last name",
+                "read_only": true,
+                "example": "Cat"
+              }
+            }
+          },
+          "Store": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Store's unique identification number",
+                "format": "int64",
+                "read_only": true
+              },
+              "someArray": {
+                "type": "array",
+                "items": {
+                  "one_of": [
+                    {
+                      "ref": "#/components/schemas/Customer"
+                    },
+                    {
+                      "type": "integer",
+                      "format": "int32"
+                    }
+                  ]
+                },
+                "description": "Just some array that can accept one of Customer or Int32"
+              },
+              "anyArray": {
+                "type": "array",
+                "items": {},
+                "description": "An array that accepts anything"
+              },
+              "customer": {
+                "ref": "#/components/schemas/Customer"
+              }
+            }
+          }
+        }
+      }
+    }
