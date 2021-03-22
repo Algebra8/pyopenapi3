@@ -1,162 +1,158 @@
-from .builder import Builder
-from .typedefs import OpenApiObject
-from .fields import Int64, String, Email, Boolean, Double, Array
+from pyopenapi3 import OpenApiBuilder
+from pyopenapi3.objects import (
+    Int64,
+    Email,
+    String,
+    Int32,
+    JSONMediaType,
+    Array,
+    Response,
+    RequestBody,
+    Op
+)
+
+open_bldr = OpenApiBuilder()
 
 
-b = Builder()
+@open_bldr.info
+class Info:
+
+    title = "Pet store api."
+    version = "0.0.1"
+    description = "A store for buying pets online."
 
 
-class Customer(OpenApiObject):
+@open_bldr.path
+class Path1:
+
+    path = '/users/{id:Int64}'
+
+    responses = [
+        Response(status=200, description="ok"),
+        Response(status=404, description="not found")
+    ]
+    request_body = RequestBody(
+        description="A request body",
+        content=[JSONMediaType(Int64)]
+    )
+
+    @open_bldr.path.op(summary="Some summary for the get")
+    @open_bldr.path.query_param(name='email', schema=Email, required=True)
+    def get(self) -> Op[..., responses]:
+        """Get request for path."""
+
+
+@open_bldr.path
+class Path2:
+
+    path = '/pets'
+
+    responses = [
+        Response(status=200, description="ok for pets"),
+        Response(status=404, description="not found for pets")
+    ]
+    request_body = RequestBody(
+        description="A request body for pets",
+        content=[JSONMediaType(Int64)]
+    )
+
+    @open_bldr.path.query_param(name='pet_id', schema=String, required=True)
+    def get(self) -> Op[None, responses]:
+        """Get request for path."""
+
+    @open_bldr.path.query_param(name='pet_id', schema=String, required=True)
+    def post(self) -> Op[request_body, responses]:
+        """Get request for path."""
+
+
+component = open_bldr.component
+
+
+@component.schema
+class Customer:
     """A SeeTickets customer"""
 
-    @b(read_only=True)
+    @component.schema_field(read_only=True)
     def id(self) -> Int64:
         """Unique identifier for the customer"""
 
-    @b(read_only=True, example="some_user@gmail.com")
+    @component.schema_field(read_only=True, example="some_user@gmail.com")
     def email(self) -> Email:
         """Customer's email address"""
 
-    @b(read_only=True, example="Mike")
+    @component.schema_field(read_only=True, example="Mike")
     def firstName(self) -> String:
         """Customer's first name"""
 
-    @b(read_only=True, example="Cat")
+    @component.schema_field(read_only=True, example="Cat")
     def lastName(self) -> String:
         """Customer's last name"""
 
 
-# This is where things get tricky:
-# we want to incorporate nested objects.
-class Store(OpenApiObject):
+@component.schema
+class Store:
     """A store for buying things"""
 
-    @b(read_only=True)
+    @component.schema_field(read_only=True)
     def id(self) -> Int64:
         """Store's unique identification number"""
 
-    @b()
+    @component.schema_field
     def customer(self) -> Customer:
         """The store's customer"""
-        # Question: Will this override Customer's description?
-        # Answer, no it will not!
+
+    @component.schema_field
+    def someArray(self) -> Array[Customer, Int32]:
+        """Just some array that can accept one of Customer or Int32"""
+
+    @component.schema_field
+    def anyArray(self) -> Array[...]:
+        """An array that accepts anything"""
 
 
-class TicketType(OpenApiObject):
-    """The ticket type of a SeeTickets ticket"""
+@component.schema
+class GeneralError:
 
-    @b(read_only=True, example=960919)
-    def id(self) -> Int64:
-        """ID for the ticket type"""
+    @component.schema_field
+    def code(self) -> Int32:
+        ...
 
-    @b(read_only=True)
-    def isSoldOut(self) -> Boolean:
-        """Whether the ticket is sold out or not"""
-
-    @b(read_only=True, example="GA PASS")
-    def name(self) -> String:
-        """The name of the ticket"""
+    @component.schema_field
+    def message(self) -> String:
+        ...
 
 
-class Ticket(OpenApiObject):
-    """A SeeTicket's ticket"""
-
-    @b(read_only=True)
-    def id(self) -> Int64:
-        """ID for a given ticket"""
-
-    @b(read_only=True)
-    def barcode(self) -> String:
-        """Barcode for a given ticket"""
-
-    @b(read_only=True)
-    def email(self) -> Email:
-        """Email for customer that holds the given ticket"""
-
-    @b(read_only=True)
-    def firstName(self) -> String:
-        """
-        First name for the customer that holds the given
-        SeeTicket's ticket
-        """
-
-    @b(read_only=True)
-    def lastName(self) -> String:
-        """
-        Last name for the customer that holds the given
-        SeeTicket's ticket
-        """
-
-    @b(read_only=True)
-    def rfid(self) -> String:
-        """RFID for the given ticket"""
-
-    @b(example="GA")
-    def row(self) -> String:
-        """Row for the given ticket"""
-
-    @b(example="GA")
-    def seat(self) -> String:
-        """Seat for the given ticket"""
-
-    @b(example="GA")
-    def section(self) -> String:
-        """Section for the given ticket"""
-
-    @b(example="purchased — transferred to Lyte")
-    def status(self) -> String:
-        """Status of the given ticket"""
-
-    @b()
-    def ticketType(self) -> TicketType:
-        """The ticket type for the given ticket"""
-        # Question: will this override TicketType's description?
-        # Answer: No it will not.
-
-    @b(example=131.94)
-    def totalPrice(self) -> Double:
-        """Total price paid for the ticket"""
+@component.response
+class NotFound:
+    description = "Entity not found."
 
 
-class PullManifestData(OpenApiObject):
-    """Data containing entire Manifest."""
-
-    @b(read_only=True, example=16262906)
-    def id(self) -> Int64:
-        """Unique identifier"""
-
-    @b()
-    def isValid(self) -> Boolean:
-        """Validity of the order"""
-
-    @b(example='abcd123')
-    def orderNumber(self) -> String:
-        """The order number"""
-
-    @b()
-    def customer(self) -> Customer:
-        """Customer for the order --- this will get overridden"""
-
-    @b()
-    def tickets(self) -> Array[Ticket]:
-        """Tickets for the order."""
+@component.response
+class IllegalInput:
+    description = "Illegal input for operation."
 
 
-class SomeArray(OpenApiObject):
-    """An array object"""
+@component.response
+class GeneralError:
+    description = "General Error"
+    content = [JSONMediaType(GeneralError)]
 
-    @b()
-    def myArray(self) -> Array[Int64, Email, Customer]:
-        """An array with int64, emails, and customers"""
-        # TODO If there is a custom object defined anywhere, then we
-        #  should write that object to the same yaml file under '#/components
-        #  /schemas', and then $ref to that object. This means that we should
-        #  have a dedicated builder that can keep track of the objects to
-        #  convert.
 
-    @b()
-    def myAnyArray(self) -> Array[...]:
-        """An array that holds anything"""
+@component.parameter
+class skipParam:
+    name = "skip"
+    in_field = "query"
+    description = "number of items to skip"
+    required = True
+    schema = Int32
 
+
+@component.parameter
+class limitParam:
+    name = "limit"
+    in_field = "query"
+    description = "max records to return"
+    required = True
+    schema = Int32
 
 
