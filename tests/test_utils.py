@@ -77,6 +77,7 @@ def test_convert_primitive_to_schema():
 
 
 def test_convert_objects_to_schema():
+
     class Pet(Component):
         ...
 

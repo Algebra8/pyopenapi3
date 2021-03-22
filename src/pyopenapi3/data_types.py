@@ -135,15 +135,6 @@ class Array(Field, Iterable):
 
         return _cls
 
-    def __iter__(self):
-        return iter(self.tvars)
-
-    def __len__(self):
-        return len(self.tvars)
-
-    def __getitem__(self, idx: int):
-        return self.tvars[idx]
-
 
 # Components (Custom defined objects)
 class Component(OpenApiObject):
