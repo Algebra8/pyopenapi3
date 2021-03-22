@@ -30,8 +30,6 @@ setup(
     python_requires='>=3.7',
     install_requires=[
         'pydantic',
-        'ruamel.yaml',
-        'typing-extensions'
     ],
     extras_require={  # Optional
         'dev': ['connexion'],
