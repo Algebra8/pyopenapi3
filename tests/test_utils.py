@@ -3,6 +3,8 @@ from unittest import mock
 from pyopenapi3.objects import (
     TextPlainMediaType,
     JSONMediaType,
+)
+from pyopenapi3.data_types import (
     Email,
     Int64,
     String,

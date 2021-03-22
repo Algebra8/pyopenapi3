@@ -19,15 +19,17 @@ from pyopenapi3.builders import (
     ComponentBuilder
 )
 from pyopenapi3.objects import (
-    Component,
     Response,
     RequestBody,
     Op,
-    Array,
     JSONMediaType,
+)
+from pyopenapi3.data_types import (
+    Array,
     Int32,
+    Int64,
     String,
-    Int64
+    Component
 )
 # from pyopenapi3.objects import Response, Array
 from .examples import (

@@ -1,14 +1,16 @@
 from pyopenapi3 import OpenApiBuilder
 from pyopenapi3.objects import (
-    Int64,
-    Email,
-    String,
-    Int32,
     JSONMediaType,
-    Array,
     Response,
     RequestBody,
     Op
+)
+from pyopenapi3.data_types import (
+    Int64,
+    Int32,
+    Array,
+    String,
+    Email
 )
 
 

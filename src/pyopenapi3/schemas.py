@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, List, Any, Union, Generic, TypeVar
+from typing import Optional, Dict, List, Any, Union
 from string import Formatter
 from enum import Enum
 
@@ -14,7 +14,6 @@ from pydantic import (
     validator,
     root_validator
 )
-from pydantic.generics import GenericModel
 
 from .types import VariableAnyUrl, MediaTypeEnum
 
