@@ -29,7 +29,7 @@ setup(
     packages=find_packages(where='src', exclude=['tests', 'examples']),
     python_requires='>=3.8',
     install_requires=[
-        'pydantic',
+        'pydantic'
     ],
     extras_require={  # Optional
         'dev': ['connexion'],

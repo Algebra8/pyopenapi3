@@ -642,4 +642,3 @@ class OpenApiBuilder:
 
     def json(self, *args, **kwargs):
         return self.build.json(*args, **kwargs)
-
