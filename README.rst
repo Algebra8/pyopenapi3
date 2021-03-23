@@ -90,7 +90,7 @@ with the example below. More exhaustive examples can be found in
 
     open_bldr.json(indent=2)
 
-This will result in the following yaml file:
+This will result in the following JSON file:
 
 .. code-block::
 
