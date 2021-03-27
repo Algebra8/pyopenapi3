@@ -502,15 +502,15 @@ class ComponentBuilder:
         # TODO allow returning None
         if self._build is None:
             self._build = ComponentsObject(
-                schemas=self._schema_builds,
-                responses=self._response_builds,
-                parameters=self._parameter_builds,
-                examples=self._examples_builds,
-                request_bodies=self._request_bodies_builds,
-                headers=self._headers_builds,
-                security_schemes=self._security_schemes_builds,
-                links=self._links_builds,
-                callbacks=self._callbacks_builds
+                schemas=self._schema_builds or None,
+                responses=self._response_builds or None,
+                parameters=self._parameter_builds or None,
+                examples=self._examples_builds or None,
+                request_bodies=self._request_bodies_builds or None,
+                headers=self._headers_builds or None,
+                security_schemes=self._security_schemes_builds or None,
+                links=self._links_builds or None,
+                callbacks=self._callbacks_builds or None
             )
         return self._build
 
