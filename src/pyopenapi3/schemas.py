@@ -32,6 +32,13 @@ class Schema(BaseModel):
             **kwargs
         )
 
+    def json(self, *, exclude_none=True, by_alias=True, **kwargs):
+        return super().json(
+            exclude_none=exclude_none,
+            by_alias=by_alias,
+            **kwargs
+        )
+
 
 class JsonSchemaDef(Schema):
     """Subset of JSON Schema Specification Wright Draft 00.
