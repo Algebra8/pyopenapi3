@@ -29,7 +29,7 @@ setup(
     packages=find_packages(where='src', exclude=['tests', 'examples']),
     python_requires='>=3.8',
     install_requires=[
-        'pydantic'
+        'pydantic', 'email_validator>=1.1.2', 'ruamel.yaml==0.16.13'
     ],
     extras_require={
         'dev': ['connexion'],
