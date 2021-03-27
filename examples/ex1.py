@@ -1,3 +1,5 @@
+import json
+
 from pyopenapi3 import OpenApiBuilder
 from pyopenapi3.objects import (
     JSONMediaType,
@@ -205,3 +207,6 @@ class ProdServer:
     url = "https://api.gigantic-server.com/v1"
     description = "Production server"
 
+
+# with open("ex1.json", 'w') as f:
+#     f.write(open_bldr.json(indent=2))

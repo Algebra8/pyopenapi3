@@ -1,4 +1,5 @@
 # Brief example for `pyopenapi3`.
+import json
 
 from pyopenapi3 import OpenApiBuilder
 from pyopenapi3.objects import (
@@ -85,4 +86,5 @@ class Store:
         """An array that accepts anything"""
 
 
-open_bldr.yaml('store.yml')
+# with open("ex1.json", 'w') as f:
+#     f.write(open_bldr.json(indent=2))
