@@ -31,7 +31,7 @@ setup(
     install_requires=[
         'pydantic'
     ],
-    extras_require={  # Optional
+    extras_require={
         'dev': ['connexion'],
         'test': ['pytest'],
     },
