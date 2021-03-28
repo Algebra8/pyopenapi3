@@ -118,6 +118,7 @@ def parse_name_and_type_from_fmt_str(
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
+                assert _type_name is not None
                 yield arg_name, getattr(pyopenapi3.data_types, _type_name)
             except AttributeError:
                 raise ValueError(
