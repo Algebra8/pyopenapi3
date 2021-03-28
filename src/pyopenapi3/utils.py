@@ -173,7 +173,7 @@ def convert_array_to_schema(
     if schema_type is AnyTypeArrayDTSchema:
         return schema_type(**kwargs)
     else:
-        sub_schemas = []
+        sub_schemas: List[Union[ReferenceObject, SchemaObject]] = []
         assert array.tvars is not None
         for _type in array.tvars:
             if issubclass(_type, Component):
