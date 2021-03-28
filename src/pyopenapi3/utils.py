@@ -98,7 +98,7 @@ ObjectToDTSchema = _ObjectToDTSchema()
 def format_description(s: Optional[str]) -> Optional[str]:
     # TODO what if s is None...
     if s is None:
-        return
+        return None
     s = s.strip()
     s = s.replace("\n", "")
     s = s.replace("\t", "")
