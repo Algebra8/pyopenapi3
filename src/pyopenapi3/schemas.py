@@ -251,7 +251,7 @@ class ArrayDTSchema(DTSchema):
 
 class AnyTypeArrayDTSchema(ArrayDTSchema):
 
-    items: Dict = Field({}, const=True)
+    items: Union[ReferenceObject, SchemaObject] = Field({}, const=True)
 
 
 class _OneOf(SchemaObject):
