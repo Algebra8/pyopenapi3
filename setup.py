@@ -33,7 +33,7 @@ setup(
     ],
     extras_require={
         'dev': ['connexion'],
-        'test': ['pytest'],
+        'test': ['pytest==6.2.2', 'mypy==0.812'],
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
