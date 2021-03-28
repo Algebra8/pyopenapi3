@@ -82,13 +82,13 @@ class _ObjectToDTSchema:
         Note that only non-complex data types are allowered here:
         cannot
         """
-        if inspect.isclass(cls_or_name):
+        if isinstance(cls_or_name, type):
             n = cls_or_name.__name__
         else:
             n = cls_or_name
         if hasattr(self, n):
             return getattr(self, n)
-        # TODO raise error?
+        raise ValueError(f"Could not find type {cls_or_name}")
 
 
 ObjectToDTSchema = _ObjectToDTSchema()
