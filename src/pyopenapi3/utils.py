@@ -174,6 +174,7 @@ def convert_array_to_schema(
         return schema_type(**kwargs)
     else:
         sub_schemas = []
+        assert array.tvars is not None
         for _type in array.tvars:
             if issubclass(_type, Component):
                 sub_schemas.append(create_reference(_type.__name__))
