@@ -672,7 +672,7 @@ class HeaderObject(ParameterObject):
 
     # `name` MUST NOT be specified, it is given in the corresponding
     # headers map.
-    name: Optional[str] = Field(None, const=True)
+    name: str = Field(None, const=True)
 
     # `in` MUST NOT be specified, it is implicitly in header.
     in_field: ParamLocation = Field(ParamLocation.HEADER,
