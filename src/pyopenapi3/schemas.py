@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, List, Any, Union
+from typing import Optional, Dict, List, Any, Union, Sequence, Mapping
 from string import Formatter
 from enum import Enum
 
@@ -75,11 +75,11 @@ class OpenApiJsonSchemaDef(JsonSchemaDef):
 
     type: Optional[str]
     all_of: Optional[List[Any]] = Field(None, alias='allOf')
-    one_of: Optional[List[Any]] = Field(None, alias='oneOf')
+    one_of: Optional[Sequence[Any]] = Field(None, alias='oneOf')
     any_of: Optional[List[Any]] = Field(None, alias='anyOf')
     not_: Optional[Any] = Field(None, alias="not")
     items: Optional[Any]
-    properties: Optional[Dict[str, Any]]
+    properties: Optional[Mapping[str, Any]]
     additional_properties: Optional[
         Union[Dict[str, Any], bool]
     ] = Field(None, alias='additionalProperties')
@@ -140,11 +140,13 @@ class SchemaObject(OpenApiJsonSchemaDef):
     # So, we overwrite some of the previous OpenApiJsonSchemaDef to
     # include self type references.
     all_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='allOf')
-    one_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='oneOf')
+    one_of: Optional[
+        Sequence[OpenApiJsonSchemaDef]
+    ] = Field(None, alias='oneOf')
     any_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='anyOf')
     not_: Optional[OpenApiJsonSchemaDef] = Field(None, alias="not")
     items: Optional[OpenApiJsonSchemaDef]
-    properties: Optional[Dict[str, OpenApiJsonSchemaDef]]
+    properties: Optional[Mapping[str, OpenApiJsonSchemaDef]]
     additional_properties: Optional[
         Union[Dict[str, OpenApiJsonSchemaDef], bool]
     ] = Field(None, alias='additionalProperties')
