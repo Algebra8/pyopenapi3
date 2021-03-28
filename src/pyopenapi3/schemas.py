@@ -46,7 +46,7 @@ class JsonSchemaDef(Schema):
     Based on FastApi's OpenApi Models, SchemaBase.
     """
 
-    ref: Optional[ReferenceObject] = Field(None, alias="$ref")
+    ref: Optional[str] = Field(None, alias="$ref")
     title: Optional[str]
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     maximum: Optional[float]
