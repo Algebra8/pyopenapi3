@@ -13,14 +13,12 @@ from typing import (
     Iterable
 )
 from string import Formatter
-import inspect
 
 from .objects import (
     OpenApiObject,
     MediaType
 )
 from .data_types import (
-    Number,
     Array,
     Field,
     Primitive,

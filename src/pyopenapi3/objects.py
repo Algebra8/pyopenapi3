@@ -134,4 +134,3 @@ class Op:
         request_body, responses = parameters
         return type("Op", (), {'request_body': request_body,
                                'responses': responses})
-
