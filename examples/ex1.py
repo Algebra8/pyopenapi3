@@ -1,5 +1,3 @@
-import json
-
 from pyopenapi3 import OpenApiBuilder
 from pyopenapi3.objects import (
     JSONMediaType,

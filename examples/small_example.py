@@ -1,6 +1,4 @@
 # Brief example for `pyopenapi3`.
-import json
-
 from pyopenapi3 import OpenApiBuilder
 from pyopenapi3.objects import (
     Response,
