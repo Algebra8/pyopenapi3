@@ -229,9 +229,9 @@ def build_mediatype_schema_from_content(
         # other side can use `construct` for quicker
         # build time.
         as_dict=False
-) -> ContentSchema:
+) -> Optional[ContentSchema]:
     if content is None:
-        return
+        return None
     content_schema = {}
     for media_type, field_type, example, examples, encoding in content:
         # Note, only bare-bones or references allowed, such as
