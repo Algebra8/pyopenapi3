@@ -60,4 +60,3 @@ server_with_vars = {
     }
   ]
 }
-
