@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, List, Any, Union
+from typing import Optional, Dict, List, Any, Union, Sequence, Mapping
 from string import Formatter
 from enum import Enum
 
@@ -46,7 +46,7 @@ class JsonSchemaDef(Schema):
     Based on FastApi's OpenApi Models, SchemaBase.
     """
 
-    ref: Optional[ReferenceObject] = Field(None, alias="$ref")
+    ref: Optional[str] = Field(None, alias="$ref")
     title: Optional[str]
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     maximum: Optional[float]
@@ -75,11 +75,11 @@ class OpenApiJsonSchemaDef(JsonSchemaDef):
 
     type: Optional[str]
     all_of: Optional[List[Any]] = Field(None, alias='allOf')
-    one_of: Optional[List[Any]] = Field(None, alias='oneOf')
+    one_of: Optional[Sequence[Any]] = Field(None, alias='oneOf')
     any_of: Optional[List[Any]] = Field(None, alias='anyOf')
     not_: Optional[Any] = Field(None, alias="not")
     items: Optional[Any]
-    properties: Optional[Dict[str, Any]]
+    properties: Optional[Mapping[str, Any]]
     additional_properties: Optional[
         Union[Dict[str, Any], bool]
     ] = Field(None, alias='additionalProperties')
@@ -140,11 +140,13 @@ class SchemaObject(OpenApiJsonSchemaDef):
     # So, we overwrite some of the previous OpenApiJsonSchemaDef to
     # include self type references.
     all_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='allOf')
-    one_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='oneOf')
+    one_of: Optional[
+        Sequence[OpenApiJsonSchemaDef]
+    ] = Field(None, alias='oneOf')
     any_of: Optional[List[OpenApiJsonSchemaDef]] = Field(None, alias='anyOf')
     not_: Optional[OpenApiJsonSchemaDef] = Field(None, alias="not")
     items: Optional[OpenApiJsonSchemaDef]
-    properties: Optional[Dict[str, OpenApiJsonSchemaDef]]
+    properties: Optional[Mapping[str, OpenApiJsonSchemaDef]]
     additional_properties: Optional[
         Union[Dict[str, OpenApiJsonSchemaDef], bool]
     ] = Field(None, alias='additionalProperties')
@@ -251,7 +253,7 @@ class ArrayDTSchema(DTSchema):
 
 class AnyTypeArrayDTSchema(ArrayDTSchema):
 
-    items: Dict = Field({}, const=True)
+    items: Union[ReferenceObject, SchemaObject] = Field({}, const=True)
 
 
 class _OneOf(SchemaObject):
@@ -672,7 +674,7 @@ class HeaderObject(ParameterObject):
 
     # `name` MUST NOT be specified, it is given in the corresponding
     # headers map.
-    name: Optional[str] = Field(None, const=True)
+    name: str = Field(None, const=True)
 
     # `in` MUST NOT be specified, it is implicitly in header.
     in_field: ParamLocation = Field(ParamLocation.HEADER,

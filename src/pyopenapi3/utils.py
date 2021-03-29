@@ -82,13 +82,13 @@ class _ObjectToDTSchema:
         Note that only non-complex data types are allowered here:
         cannot
         """
-        if inspect.isclass(cls_or_name):
+        if isinstance(cls_or_name, type):
             n = cls_or_name.__name__
         else:
             n = cls_or_name
         if hasattr(self, n):
             return getattr(self, n)
-        # TODO raise error?
+        raise ValueError(f"Could not find type {cls_or_name}")
 
 
 ObjectToDTSchema = _ObjectToDTSchema()
@@ -98,7 +98,7 @@ ObjectToDTSchema = _ObjectToDTSchema()
 def format_description(s: Optional[str]) -> Optional[str]:
     # TODO what if s is None...
     if s is None:
-        return
+        return None
     s = s.strip()
     s = s.replace("\n", "")
     s = s.replace("\t", "")
@@ -106,7 +106,7 @@ def format_description(s: Optional[str]) -> Optional[str]:
 
 
 def parse_name_and_type_from_fmt_str(
-        formatted_str) -> Generator[Tuple[str, Type[Field]]]:
+        formatted_str) -> Generator[Tuple[str, Type[Field]], None, None]:
     """
     Parse a formatted string and return the names
     of the args and their types.
@@ -118,6 +118,7 @@ def parse_name_and_type_from_fmt_str(
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
+                assert _type_name is not None
                 yield arg_name, getattr(pyopenapi3.data_types, _type_name)
             except AttributeError:
                 raise ValueError(
@@ -172,7 +173,8 @@ def convert_array_to_schema(
     if schema_type is AnyTypeArrayDTSchema:
         return schema_type(**kwargs)
     else:
-        sub_schemas = []
+        sub_schemas: List[Union[ReferenceObject, SchemaObject]] = []
+        assert array.tvars is not None
         for _type in array.tvars:
             if issubclass(_type, Component):
                 sub_schemas.append(create_reference(_type.__name__))
@@ -227,9 +229,9 @@ def build_mediatype_schema_from_content(
         # other side can use `construct` for quicker
         # build time.
         as_dict=False
-) -> ContentSchema:
+) -> Optional[ContentSchema]:
     if content is None:
-        return
+        return None
     content_schema = {}
     for media_type, field_type, example, examples, encoding in content:
         # Note, only bare-bones or references allowed, such as
