@@ -14,7 +14,6 @@ from pyopenapi3.data_types import (
 from pyopenapi3.schemas import (
     MediaTypeObject,
     Int64DTSchema,
-    EmailDTSchema,
     ReferenceObject,
     ArrayDTSchema,
     AnyTypeArrayDTSchema,

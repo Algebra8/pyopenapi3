@@ -1,17 +1,3 @@
-import pytest
-
-import sys
-import os
-# TODO remove when setup included.
-pyopenpath = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        '..',
-        'src/'
-    )
-)
-sys.path.insert(0, pyopenpath)
-
 from pyopenapi3.builders import (
     InfoBuilder,
     ServerBuilder,
@@ -20,7 +6,6 @@ from pyopenapi3.builders import (
 )
 from pyopenapi3.objects import (
     Response,
-    RequestBody,
     Op,
     JSONMediaType,
 )
@@ -250,5 +235,3 @@ def test_components_builder():
     assert parameters == example_parameters
 
     # TODO add tests for Security Scheme Object.
-
-
