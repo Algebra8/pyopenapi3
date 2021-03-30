@@ -2,8 +2,8 @@ from typing import Pattern
 import re
 from enum import Enum
 
-from pydantic import AnyUrl
-from pydantic.errors import UrlExtraError
+from pydantic import AnyUrl  # type: ignore
+from pydantic.errors import UrlExtraError  # type: ignore
 
 
 # Taken from Pydantic:
