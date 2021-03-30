@@ -6,7 +6,7 @@ from enum import Enum
 
 from pathlib import Path
 
-from pydantic import (
+from pydantic import (  # type: ignore
     BaseModel,
     Field,
     AnyUrl,
