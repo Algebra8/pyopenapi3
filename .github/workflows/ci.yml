@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-stages:
-  - lint
-  - test
-
 jobs:
 
   lint:
