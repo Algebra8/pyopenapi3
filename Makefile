@@ -2,6 +2,17 @@
 .PHONY: install-linting
 install-linting:
 	pip install -r tests/requirements-linting.txt
+	# log installs
+	pip freeze
+
+
+.PHONY: lint
+lint: install-linting
+	# stop the build if there are Python syntax errors or undefined names
+	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+	# exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+	mypy src/pyopenapi3
 
 .PHONY: install-pyopenapi3
 install-pyopenapi3:
@@ -12,6 +23,12 @@ install-pyopenapi3:
 .PHONY: install-testing
 install-testing: install-pyopenapi3
 	pip install -r tests/requirements-testing.txt
+	# log installs
+	pip freeze
+
+.PHONY: test
+test: install-testing
+	pytest
 
 .PHONY: clean
 clean:
