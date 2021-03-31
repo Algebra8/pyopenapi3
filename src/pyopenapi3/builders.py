@@ -452,9 +452,21 @@ class ComponentBuilder:
         self._build = None
 
     def __call__(self, cls):
+        # Proeprty level attrs.
         properties = {}
+
+        # Object level attrs. See issue-76.
+        # For now we specifically handle `required` because it is the only
+        # field that is clearly object-level.
+        # If there are any other object-level attrs, more general logic
+        # should be incorporated.
+        required = []
+
         for _f in self._fields_used:
             props = BuilderBus.schema_fields[_f].popleft()
+            is_required = props.pop("required", False)
+            if is_required:
+                required.append(_f.__name__)
             _type = get_type_hints(_f, localns=cls.__dict__)['return']
             schema = create_schema(
                 _type, description=format_description(_f.__doc__),
@@ -466,7 +478,7 @@ class ComponentBuilder:
         self._fields_used = set()
 
         self._schema_builds[cls.__name__] = ObjectsDTSchema(
-            properties=properties
+            properties=properties, required=required or None
         )
 
         # Flush functions that were used to build this ObjectSchema.
