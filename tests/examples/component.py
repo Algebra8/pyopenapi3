@@ -99,3 +99,30 @@ component = {
     }
   }
 }
+
+object_lvl_test = {
+  "schemas": {
+    "Pet": {
+      "required": [
+        "name",
+        "animal_type"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+          "description": "Pet's name",
+          "example": "Susie"
+        },
+        "animal_type": {
+          "minLength": 1,
+          "type": "string",
+          "description": "Kind of animal",
+          "example": "cat"
+        }
+      }
+    }
+  }
+}

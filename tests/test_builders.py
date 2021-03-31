@@ -234,4 +234,22 @@ def test_components_builder():
     example_parameters = example_components['parameters']
     assert parameters == example_parameters
 
-    # TODO add tests for Security Scheme Object.
+
+def test_component_with_object_level_fields():
+    component = ComponentBuilder()
+
+    @component.schema
+    class Pet:
+
+        @component.schema_field(
+            required=True, example="Susie",
+            min_length=1, max_length=100
+        )
+        def name(self) -> String:
+            """Pet's name"""
+
+        @component.schema_field(required=True, example="cat", min_length=1)
+        def animal_type(self) -> String:
+            """Kind of animal"""
+
+    assert component.build.dict() == component_examples.object_lvl_test

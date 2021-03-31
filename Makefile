@@ -28,7 +28,7 @@ install-testing: install-pyopenapi3
 
 .PHONY: test
 test: install-testing
-	pytest
+	pytest -vv
 
 .PHONY: clean
 clean:
