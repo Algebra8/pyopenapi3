@@ -1,7 +1,7 @@
-from pyopenapi3 import OpenApiBuilder
+from pyopenapi3 import OpenApiBuilder, create_schema
+
 from pyopenapi3.data_types import String, Int32, Array, DateTime
 from pyopenapi3.objects import Op, Response, RequestBody, JSONMediaType
-from pyopenapi3.utils import create_schema
 
 open_bldr = OpenApiBuilder()
 
