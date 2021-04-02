@@ -28,6 +28,7 @@ from .data_types import (
 # _from_fmt_str`
 import pyopenapi3.data_types
 from .schemas import (
+    Schema,
     StringDTSchema, ByteDTSchema, BinaryDTSchema, DateDTSchema,
     DateTimeDTSchema, PasswordDTSchema, IntegerDTSchema, Int32DTSchema,
     Int64DTSchema, NumberDTSchema, FloatDTSchema, DoubleDTSchema,
@@ -104,24 +105,51 @@ def format_description(s: Optional[str]) -> Optional[str]:
 
 
 def parse_name_and_type_from_fmt_str(
-        formatted_str) -> Generator[Tuple[str, Type[Field]], None, None]:
+        formatted_str: str,
+        allowed_types: Optional[Iterable[Component]] = None
+) -> Generator[Tuple[str, Union[Type[Field], str]], None, None]:
     """
-    Parse a formatted string and return the names
-    of the args and their types.
-
-    E.g. "/user/{id:int}" -> ("id", "int")
-
+    Parse a formatted string and return the names of the args 
+    and their types. Will raise a ValueError if the type is not 
+    a pyopenapi3 `Field` or an already defined Component Parameter
+    type.
+    
+    In the case that the type represents a `Field`, then its 
+    type will be returned, respectively. Otherwise, if it is an 
+    already defined Component Parameter, then the name of the  
+    class that defines the parameter will be returned.
+    
+    .. code:: none
+        # E.g. 1
+    
+        "/user/{id:String}" -> ("id", pyopenapi3.data_types.String)
+    
+        # E.g. 2
+    
+        @open_bldr.component.parameter
+        class PetId: ...
+    
+        "/pets/{pet:PetId}" -> ("pet", "PetId")
+    
     If the string is not formatted, then will return (None, None).
     """
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
         if arg_name is not None:
             try:
                 assert _type_name is not None
-                yield arg_name, getattr(pyopenapi3.data_types, _type_name)
+                _type = (
+                    allowed_types[_type_name] if allowed_types is not None 
+                    and _type_name in allowed_types 
+                    else getattr(pyopenapi3.data_types, _type_name)
+                )
+                yield arg_name, _type
             except AttributeError:
                 raise ValueError(
                     "A non-`Field` or `OpenApiObject` type was found. "
-                    f"Can't use `{_type_name}` as a type in {formatted_str}."
+                    f"Can't use `{_type_name}` as a type in {formatted_str}. "
+                    f"Must be a stringified pyopenapi3 `data_type`, such "
+                    f"as `pyopenapi3.data_types.String`, or a reference to a "
+                    f"Component."
                 ) from None
 
 
@@ -143,6 +171,10 @@ def create_schema(
         __type: Type[OpenApiObject],
         **kwargs: Any
 ) -> Union[SchemaObject, ReferenceObject]:
+    if isinstance(__type, Schema):
+        # Case where a Schema is already defined, don't need 
+        # to recreate it.
+        return __type
     if issubclass(__type, Component):
         return convert_objects_to_schema(__type)
     elif issubclass(__type, Primitive):
