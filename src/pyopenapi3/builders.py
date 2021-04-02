@@ -212,6 +212,12 @@ class OperationBuilder:
         )
 
 
+# Issue-75: Save any user defined Component schema so that it can 
+# be validated and potentially referenced by `PathItemBuilder`. 
+# See call to `parse_name_and_type_from_fmt_str` in `PathItemBuilder`.
+_allowed_types = {}
+
+
 class PathItemBuilder:
 
     def __init__(self):
@@ -248,7 +254,9 @@ class PathItemBuilder:
             parameters += getattr(cls, 'parameters')
         # The given path may also hold params, e.g. "/users/{id:Int64}"
         path = cls.path
-        for name, _type in parse_name_and_type_from_fmt_str(path):
+        for name, _type in parse_name_and_type_from_fmt_str(
+            path, allowed_types=_allowed_types
+        ):
             parameters.append(
                 ParamBuilder('path').build_param(
                     name=name, schema=_type, required=True
@@ -269,8 +277,14 @@ class ParamBuilder:
 
     _field_keys = set(ParameterObject.__fields__.keys())
     _field_keys.add('schema')
+    _allowable_in_fields = {'path', 'query', 'header', 'cookie'}
 
     def __init__(self, __in):
+        if __in not in self._allowable_in_fields:
+            raise ValueError(
+                f"{__in} is not an acceptable `in-field`. "
+                f"Choices are {list(self._allowable_in_fields)}"
+            )
         self.__in = __in
 
     def __call__(self, **kwargs):
@@ -420,7 +434,6 @@ class ComponentBuilder:
         self._fields_used = set()
 
         # Parameter builds
-        # TODO parameters building for Comps
         self.parameter = self._parameters
         self._parameter_builds = {}
 
@@ -484,14 +497,18 @@ class ComponentBuilder:
         # Flush functions that were used to build this ObjectSchema.
         self._field_builds = {}
 
-        injected_comp_cls = inject_component(cls)
-        return injected_comp_cls
+        return inject_component(cls)
 
     def _parameters(self, cls=None, /, *, as_dict=None):
         if cls is not None:
             self._parameter_builds[cls.__name__] = \
                 ParamBuilder.build_param_from_cls(cls)
-            return cls
+            
+            injected_comp_cls = inject_component(cls)
+            # Allow `cls` to be a valid reference in formatted `path`
+            # on `PathItemBuilder`
+            _allowed_types[cls.__name__] = injected_comp_cls
+            return injected_comp_cls
         if as_dict is None:
             raise ValueError(
                 "When not using the Components' parameter builder as a "
@@ -548,7 +565,7 @@ class ComponentBuilder:
             return func
 
         # Note, there is no good reason for why we can't just dump
-        # the functions and any attrs (i.e. {} or kwargs), onto a
+        # the functions and any attrs (i.e. {} or kwargs), into a
         # dict hosted by ComponentsBuilder, and flushing the dict
         # after using it (note this is important, or else fields on
         # older components will be used for the current iteration).
