@@ -212,8 +212,8 @@ class OperationBuilder:
         )
 
 
-# Issue-75: Save any user defined Component schema so that it can 
-# be validated and potentially referenced by `PathItemBuilder`. 
+# Issue-75: Save any user defined Component schema so that it can
+# be validated and potentially referenced by `PathItemBuilder`.
 # See call to `parse_name_and_type_from_fmt_str` in `PathItemBuilder`.
 _allowed_types = {}
 
@@ -503,7 +503,7 @@ class ComponentBuilder:
         if cls is not None:
             self._parameter_builds[cls.__name__] = \
                 ParamBuilder.build_param_from_cls(cls)
-            
+
             injected_comp_cls = inject_component(cls)
             # Allow `cls` to be a valid reference in formatted `path`
             # on `PathItemBuilder`

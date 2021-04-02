@@ -109,28 +109,28 @@ def parse_name_and_type_from_fmt_str(
         allowed_types: Optional[Iterable[Component]] = None
 ) -> Generator[Tuple[str, Union[Type[Field], str]], None, None]:
     """
-    Parse a formatted string and return the names of the args 
-    and their types. Will raise a ValueError if the type is not 
+    Parse a formatted string and return the names of the args
+    and their types. Will raise a ValueError if the type is not
     a pyopenapi3 `Field` or an already defined Component Parameter
     type.
-    
-    In the case that the type represents a `Field`, then its 
-    type will be returned, respectively. Otherwise, if it is an 
-    already defined Component Parameter, then the name of the  
+
+    In the case that the type represents a `Field`, then its
+    type will be returned, respectively. Otherwise, if it is an
+    already defined Component Parameter, then the name of the
     class that defines the parameter will be returned.
-    
+
     .. code:: none
         # E.g. 1
-    
+
         "/user/{id:String}" -> ("id", pyopenapi3.data_types.String)
-    
+
         # E.g. 2
-    
+
         @open_bldr.component.parameter
         class PetId: ...
-    
+
         "/pets/{pet:PetId}" -> ("pet", "PetId")
-    
+
     If the string is not formatted, then will return (None, None).
     """
     for _, arg_name, _type_name, _ in Formatter().parse(formatted_str):
@@ -138,8 +138,8 @@ def parse_name_and_type_from_fmt_str(
             try:
                 assert _type_name is not None
                 _type = (
-                    allowed_types[_type_name] if allowed_types is not None 
-                    and _type_name in allowed_types 
+                    allowed_types[_type_name] if allowed_types is not None
+                    and _type_name in allowed_types
                     else getattr(pyopenapi3.data_types, _type_name)
                 )
                 yield arg_name, _type
@@ -172,7 +172,7 @@ def create_schema(
         **kwargs: Any
 ) -> Union[SchemaObject, ReferenceObject]:
     if isinstance(__type, Schema):
-        # Case where a Schema is already defined, don't need 
+        # Case where a Schema is already defined, don't need
         # to recreate it.
         return __type
     if issubclass(__type, Component):
