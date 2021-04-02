@@ -105,7 +105,7 @@ object_lvl_test = {
     "Pet": {
       "required": [
         "name",
-        "animal_type"
+        "animal_type",
       ],
       "type": "object",
       "properties": {
