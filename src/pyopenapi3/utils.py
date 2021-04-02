@@ -106,7 +106,7 @@ def format_description(s: Optional[str]) -> Optional[str]:
 
 def parse_name_and_type_from_fmt_str(
         formatted_str: str,
-        allowed_types: Optional[Iterable[Component]] = None
+        allowed_types: Optional[Dict[str, Component]] = None
 ) -> Generator[Tuple[str, Union[Type[Field], str]], None, None]:
     """
     Parse a formatted string and return the names of the args

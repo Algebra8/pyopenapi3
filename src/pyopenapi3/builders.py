@@ -3,6 +3,7 @@ from typing import get_type_hints, Union, List, Any, Dict, Optional
 from collections import deque
 import re
 
+from pyopenapi3.data_types import Component
 from pyopenapi3.utils import (
     build_mediatype_schema_from_content,
     create_schema,
@@ -12,7 +13,7 @@ from pyopenapi3.utils import (
 )
 from pyopenapi3.objects import (
     Response,
-    RequestBody,
+    RequestBody
 )
 from pyopenapi3.schemas import (
     RequestBodyObject,
@@ -215,7 +216,7 @@ class OperationBuilder:
 # Issue-75: Save any user defined Component schema so that it can
 # be validated and potentially referenced by `PathItemBuilder`.
 # See call to `parse_name_and_type_from_fmt_str` in `PathItemBuilder`.
-_allowed_types = {}
+_allowed_types: Dict[str, Component] = {}
 
 
 class PathItemBuilder:
