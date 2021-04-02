@@ -1,8 +1,11 @@
+import pytest
+
+from pyopenapi3 import OpenApiBuilder, create_schema
 from pyopenapi3.builders import (
     InfoBuilder,
     ServerBuilder,
     PathsBuilder,
-    ComponentBuilder
+    ComponentBuilder,
 )
 from pyopenapi3.objects import (
     Response,
@@ -148,6 +151,71 @@ def test_path_success():
             ...
 
     assert path_bldr.build['/pets'].dict() == path_examples.path['/pets']
+
+
+@pytest.fixture
+def _allowed_types():
+    """Tear down for global `pyopenapi3.builders._allowed_types`."""
+    
+    # Clean up global `_allowed_types`; any test that indirectly 
+    # makes use of `pyopenapi3.builders._allowed_types` but can be
+    # directly affected, such as in `test_paths_path__break`, should
+    # use this fixture. This is because any allowed type should be 
+    # available for the entire running process.
+    import pyopenapi3
+    pyopenapi3.builders._allowed_types = {}
+    yield 
+
+
+def test_path_with_path_parameter():
+    open_bldr = OpenApiBuilder()
+    
+    @open_bldr.component.parameter
+    class PetID:
+        
+        name = "pet_id"
+        description = "Pet's Unique identifier"
+        in_field = "path"
+        schema = create_schema(String, pattern="^[a-zA-Z0-9-]+$")
+        required = True
+        
+    @open_bldr.path
+    class Path:
+        
+        path = "/pets/{pet_id:PetID}"
+
+    p = open_bldr.path.build["/pets/{pet_id}"]
+    
+    assert p.dict() == path_examples.path_with_parameter
+
+
+def test_paths_path__break(_allowed_types):
+    path_bldr = PathsBuilder()
+    
+    with pytest.raises(ValueError):
+        @path_bldr
+        class Path:
+            
+            # Should break because `PetID` is not a component parameter
+            # schema and is not a `pyopenapi3.data_types.Field` Type.
+            path = "/pets/{pet_id:PetID}"
+
+
+def test_path_parameter_in_field__fail():
+    comp = ComponentBuilder()
+    
+    with pytest.raises(ValueError):
+
+        @comp.parameter
+        class PetID:
+        
+            name = "pet_id"
+            description = "Pet's Unique identifier"
+            # Should fail with anything not in `ParamBuilder
+            # ._allowable_in_fields`.
+            in_field = "notpath"
+            schema = create_schema(String, pattern="^[a-zA-Z0-9-]+$")
+            required = True
 
 
 def test_components_builder():
