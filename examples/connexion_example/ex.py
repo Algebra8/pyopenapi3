@@ -1,6 +1,6 @@
 from pyopenapi3 import OpenApiBuilder, create_schema
 
-from pyopenapi3.data_types import String, Int32, Array, DateTime
+from pyopenapi3.data_types import String, Int32, Array, DateTime, Object
 from pyopenapi3.objects import Op, Response, RequestBody, JSONMediaType
 
 open_bldr = OpenApiBuilder()
@@ -35,8 +35,10 @@ class Pet:
     def animal_type(self) -> String:
         """Kind of animal"""
 
+    # Object is an in-line description for a Free-Form Object.
+    # For a more complicated object, use `Component.schema`.
     @component.schema_field
-    def tags(self):
+    def tags(self) -> Object:
         """Custom tags"""
 
     @component.schema_field(
