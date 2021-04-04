@@ -17,7 +17,8 @@ from pyopenapi3.data_types import (
     Int32,
     Int64,
     String,
-    Component
+    Component,
+    Object
 )
 # from pyopenapi3.objects import Response, Array
 from .examples import (
@@ -320,4 +321,39 @@ def test_component_with_object_level_fields():
         def animal_type(self) -> String:
             """Kind of animal"""
 
-    assert component.build.dict() == component_examples.object_lvl_test
+    example_cpy = component_examples.object_lvl_test.copy()
+    d = component.build.dict()
+    # The `required` list is not predictable. That is, it is not clear
+    # before runtime whether the list will be ["name", "animal_type"]
+    # or ["animal_type", "name"]. Since we need to test these lists in an
+    # unordered fashion, we pop them out of each dict instance and compare
+    # their sets. Then we can test the rest of the key/vals.
+    required_list = d['schemas']['Pet'].pop('required')
+    example_required_list = example_cpy['schemas']['Pet'].pop('required')
+    assert set(required_list) == set(example_required_list)
+    assert d == example_cpy
+
+
+def test_component_with_inline_object():
+    c = ComponentBuilder()
+
+    @c.schema
+    class Pet:
+
+        @c.schema_field
+        def tags(self) -> Object:
+            """Custom tags"""
+
+    assert c.build.dict() == {
+        'schemas': {
+            'Pet': {
+                'type': 'object',
+                'properties': {
+                    'tags': {
+                        'type': 'object',
+                        'description': 'Custom tags'
+                    }
+                }
+            }
+        }
+    }

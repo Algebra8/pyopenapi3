@@ -29,11 +29,21 @@ from .data_types import (
 import pyopenapi3.data_types
 from .schemas import (
     Schema,
-    StringDTSchema, ByteDTSchema, BinaryDTSchema, DateDTSchema,
-    DateTimeDTSchema, PasswordDTSchema, IntegerDTSchema, Int32DTSchema,
-    Int64DTSchema, NumberDTSchema, FloatDTSchema, DoubleDTSchema,
+    StringDTSchema,
+    ByteDTSchema,
+    BinaryDTSchema,
+    DateDTSchema,
+    DateTimeDTSchema,
+    PasswordDTSchema,
+    IntegerDTSchema,
+    Int32DTSchema,
+    Int64DTSchema,
+    NumberDTSchema,
+    FloatDTSchema,
+    DoubleDTSchema,
     EmailDTSchema,
-    BoolDTSchema, ArrayDTSchema,
+    BoolDTSchema,
+    ArrayDTSchema,
     ReferenceObject,
     PrimitiveDTSchema,
     DTSchema,
@@ -41,7 +51,8 @@ from .schemas import (
     AnyTypeArrayDTSchema,
     MixedTypeArrayDTSchema,
     MediaTypeObject,
-    SchemaObject
+    SchemaObject,
+    ObjectsDTSchema
 )
 
 
@@ -74,6 +85,9 @@ class _ObjectToDTSchema:
     SingleArray = ArrayDTSchema
     MixedTypeArray = MixedTypeArrayDTSchema
     AnyTypeArray = AnyTypeArrayDTSchema
+
+    # In-line Objects
+    Object = ObjectsDTSchema
 
     def __call__(self, cls_or_name: Union[str, Type]) -> Type[DTSchema]:
         """Return the schema of a Data Type.
