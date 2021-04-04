@@ -1,5 +1,4 @@
 email-validator==1.1.2
 pydantic==1.8.1
-ruamel.yaml==0.16.13
-ruamel.yaml.clib==0.2.2
+PyYAML==5.4.1
 typing-extensions==3.7.4.3

@@ -3,6 +3,8 @@ from typing import get_type_hints, Union, List, Any, Dict, Optional
 from collections import deque
 import re
 
+import yaml
+
 from pyopenapi3.data_types import Component
 from pyopenapi3.utils import (
     build_mediatype_schema_from_content,
@@ -672,3 +674,8 @@ class OpenApiBuilder:
 
     def json(self, *args, **kwargs):
         return self.build.json(*args, **kwargs)
+
+    def yaml(self):
+        d = self.build.dict()
+        # dump the dictionary in its current order.
+        return yaml.dump(d, default_flow_style=False, sort_keys=False)
