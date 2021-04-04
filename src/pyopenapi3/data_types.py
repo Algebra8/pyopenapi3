@@ -18,6 +18,7 @@ __all__ = (
     "Int32",
     "Int64",
     "Array",
+    "Object"
 )
 
 
@@ -134,6 +135,17 @@ class Array(Field, Iterable):
         _cls.__qualname__ = f"{cls.__qualname__}[{s}]"
 
         return _cls
+
+
+class Object(Primitive):
+    """An in-line Free-Form Object.
+
+    A free-form object (arbitrary property/value pairs) is
+    defined as `type: object`.
+
+    Since this object can be described in-line, we consider it
+    a primitive, and not a Component object.
+    """
 
 
 # Components (Custom defined objects)

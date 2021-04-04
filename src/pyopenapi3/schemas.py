@@ -157,7 +157,6 @@ class SchemaObject(OpenApiJsonSchemaDef):
 
 # Data Types
 class DTSchema(SchemaObject):
-
     ...
 
 

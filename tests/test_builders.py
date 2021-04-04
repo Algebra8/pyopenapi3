@@ -17,7 +17,8 @@ from pyopenapi3.data_types import (
     Int32,
     Int64,
     String,
-    Component
+    Component,
+    Object
 )
 # from pyopenapi3.objects import Response, Array
 from .examples import (
@@ -321,3 +322,28 @@ def test_component_with_object_level_fields():
             """Kind of animal"""
 
     assert component.build.dict() == component_examples.object_lvl_test
+
+
+def test_component_with_inline_object():
+    c = ComponentBuilder()
+
+    @c.schema
+    class Pet:
+
+        @c.schema_field
+        def tags(self) -> Object:
+            """Custom tags"""
+
+    assert c.build.dict() == {
+        'schemas': {
+            'Pet': {
+                'type': 'object',
+                'properties': {
+                    'tags': {
+                        'type': 'object',
+                        'description': 'Custom tags'
+                    }
+                }
+            }
+        }
+    }
