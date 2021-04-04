@@ -75,7 +75,7 @@ class Pets:
         )
     ]
 
-    @paths.op(tags=["Pets"], operation_id=["app.get_pets"])
+    @paths.op(tags=["Pets"], operation_id="app.get_pets")
     @paths.query_param(
         name="animal_type",
         schema=create_schema(String, pattern="^[a-zA-Z0-9]*$")
@@ -108,7 +108,7 @@ class PetsWithId:
         Response(status=404, description="Pet does not exist")
     ]
 
-    @paths.op(tags=["Pets"], operation_id=["app.get_pet"])
+    @paths.op(tags=["Pets"], operation_id="app.get_pet")
     def get(self) -> Op[..., get_responses]:
         """Get a single pet"""
 
@@ -124,7 +124,7 @@ class PetsWithId:
         required=True
     )
 
-    @paths.op(tags=["Pets"], operation_id=["app.put_get"])
+    @paths.op(tags=["Pets"], operation_id="app.put_get")
     def put(self) -> Op[put_body, put_responses]:
         """Create or update a pet"""
 
@@ -133,6 +133,6 @@ class PetsWithId:
         Response(status=404, description="Pet does not exist")
     ]
 
-    @paths.op(tags=["Pets"], operation_id=["app.delete_pet"])
+    @paths.op(tags=["Pets"], operation_id="app.delete_pet")
     def delete(self) -> Op[..., delete_responses]:
         """Remove a pet"""
