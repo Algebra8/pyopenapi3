@@ -10,8 +10,8 @@ open_bldr = OpenApiBuilder()
 class Info:
 
     title = "Pet Shop Example API"
-    version: "0.1"
-    description: "Simple example API to store and retrieve pets"
+    version = "0.1"
+    description = "Simple example API to store and retrieve pets"
 
 
 component = open_bldr.component
