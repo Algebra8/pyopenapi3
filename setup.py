@@ -32,7 +32,6 @@ setup(
         'pydantic', 'email_validator>=1.1.2', 'PyYAML==5.4.1'
     ],
     extras_require={
-        'dev': ['connexion'],
         'test': ['pytest==6.2.2', 'mypy==0.812'],
     },
     classifiers=[
