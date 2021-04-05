@@ -151,3 +151,29 @@ class Object(Primitive):
 # Components (Custom defined objects)
 class Component(OpenApiObject):
     ...
+
+
+class Schemas(Component):
+    """Schema component type.
+
+    Note, the name of this class is important, as it will
+    determine the composition the Components schema.
+
+    I.e.:
+
+        "components":
+            "schemas": ...
+    """
+
+
+class Parameters(Component):
+    """Parameter component type.
+
+    Note, the name of this class is important, as it will
+    determine the composition the Components schema.
+
+    I.e.:
+
+        "components":
+            "parameters": ...
+    """
