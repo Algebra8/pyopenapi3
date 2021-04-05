@@ -305,7 +305,7 @@ class ParamBuilder:
             # the reference.
             if type(schema) == type:
                 if issubclass(schema, Component):
-                    return kwargs['schema'] 
+                    return kwargs['schema']
         elif 'content' in kwargs:
             content = kwargs.pop('content')
             kwargs['content'] = build_mediatype_schema_from_content(content)
