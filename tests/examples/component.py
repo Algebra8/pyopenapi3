@@ -126,3 +126,27 @@ object_lvl_test = {
     }
   }
 }
+
+param_reference_comp = {
+  "schemas": {
+    "Pet": {
+      "type": "object",
+      "properties": {
+        "pet_id": {
+          "$ref": "#/components/parameters/PetId"
+        }
+      }
+    }
+  },
+  "parameters": {
+    "PetId": {
+      "name": "pet_id",
+      "in": "path",
+      "description": "Pet's Unique Identifier",
+      "schema": {
+        "pattern": "^[a-zA-Z0-9-]+$",
+        "type": "string"
+      }
+    }
+  }
+}

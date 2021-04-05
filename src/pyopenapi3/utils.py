@@ -10,7 +10,8 @@ from typing import (
     Dict,
     List,
     Generator,
-    Iterable
+    Iterable,
+    TypeVar
 )
 from string import Formatter
 
@@ -22,7 +23,7 @@ from .data_types import (
     Array,
     Field,
     Primitive,
-    Component
+    Component,
 )
 # Used to dynamically retrieve field in `parse_name_and_type
 # _from_fmt_str`
@@ -54,9 +55,6 @@ from .schemas import (
     SchemaObject,
     ObjectsDTSchema
 )
-
-
-OPENAPI_DEF = '__OPENAPIDEF__FIELD_OR_COMPONENT__'
 
 
 class _ObjectToDTSchema:
@@ -167,18 +165,11 @@ def parse_name_and_type_from_fmt_str(
                 ) from None
 
 
-def create_reference(name: str) -> ReferenceObject:
-    return ReferenceObject(ref=f"#/components/schemas/{name}")
-
-
-def mark_component_and_attach_schema(obj, schema):
-    """Mark an object as relating to an Open API schema
-    and attach said schema to it.
-
-    This will be used by `create_object` to build the entire
-    `ObjectSchema`.
-    """
-    setattr(obj, OPENAPI_DEF, schema)
+def create_reference(
+    name: str,
+    component_dir: str = "schemas"
+) -> ReferenceObject:
+    return ReferenceObject(ref=f"#/components/{component_dir}/{name}")
 
 
 def create_schema(
@@ -201,9 +192,19 @@ def create_schema(
 
 
 def convert_objects_to_schema(obj: Type[Component]) -> ReferenceObject:
-    # Any non-reference object should be created by the
-    # Components builder.
-    return create_reference(obj.__name__)
+    """Convert a custom object to a schema.
+
+    This is done by create a reference to the object. Any non-reference
+    object should be created by the Components builder.
+
+    param `obj` **must** be a subtype of `data_types.Component`. Its
+    type will determine what kind of component it is, e.g. '#/components/
+    schemas/...' or '#/components/parameters/...'.
+    """
+    cmp_type: str = 'schemas'  # default component type
+    if hasattr(obj, '__cmp_type__'):
+        cmp_type = obj.__cmp_type__.lower()  # type: ignore
+    return create_reference(obj.__name__, cmp_type)
 
 
 def convert_primitive_to_schema(
@@ -232,22 +233,25 @@ def convert_array_to_schema(
             return schema_type(items=sub_schemas[0], **kwargs)
 
 
-def inject_component(cls):
+ComponentType = TypeVar('ComponentType', bound=Component)
+
+
+def inject_component(cls, cmp_type: Type[ComponentType]):
     """'Inject' the `Component` class into the custom, user defined,
     soon-to-be Component, class.
 
     This will help when building a property that involves a user defined
     custom Component.
+
+    param `cmp_type` is some subtype of `data_types.Component`, e.g.
+    whether it is a Schema component or Parameter component.
     """
     if issubclass(cls, Component):
         return cls
     else:
-        # @functools.wraps(cls, updated=())
-        # class Injected(cls, Component):
-        #     pass
         injected = type(
             "Injected",
-            (cls, Component),
+            (cls, cmp_type),
             {attr_name: attr for attr_name, attr in cls.__dict__.items()}
         )
         injected.__qualname__ = f'Component[{cls.__name__}]'
@@ -255,6 +259,7 @@ def inject_component(cls):
         # used in the conversion to an Open API object, e.g.
         # {__name__: <rest of properties>}.
         injected.__name__ = cls.__name__
+        injected.__cmp_type__ = cmp_type.__name__  # type: ignore
 
         return injected
 

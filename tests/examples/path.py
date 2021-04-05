@@ -27,7 +27,7 @@ path_with_parameter = {
       'name': 'pet_id',
       'in': 'path',
       'required': True,
-      'schema': {'$ref': '#/components/schemas/PetID'}
+      'schema': {'$ref': '#/components/parameters/PetID'}
     }
   ]
 }
