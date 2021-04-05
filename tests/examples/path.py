@@ -21,13 +21,19 @@ path = {
   }
 }
 
-path_with_parameter = {
+global_path_with_reference_parameter = {
+  'parameters': [
+    {'$ref': '#/components/parameters/PetID'}
+  ]
+}
+
+global_path_with_schema_parameter = {
   'parameters': [
     {
-      'name': 'pet_id',
+      'name': 'pet_name',
       'in': 'path',
       'required': True,
-      'schema': {'$ref': '#/components/parameters/PetID'}
+      'schema': {'type': 'string'}
     }
   ]
 }

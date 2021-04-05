@@ -181,13 +181,33 @@ def test_path_with_path_parameter():
         required = True
 
     @open_bldr.path
-    class Path:
+    class PathWithReference:
 
         path = "/pets/{pet_id:PetID}"
-
-    p = open_bldr.path.build["/pets/{pet_id}"]
-
-    assert p.dict() == path_examples.path_with_parameter
+    
+    
+    @open_bldr.path
+    class PathWithSchema:
+        
+        path = "/pets/{pet_name:String}"
+        
+    
+    path_with_ref = open_bldr.path.build["/pets/{pet_id}"]
+    path_with_schema = open_bldr.path.build["/pets/{pet_name}"]
+    
+    assert (
+        path_with_ref.dict() 
+        == path_examples.global_path_with_reference_parameter
+    )
+    assert (
+        path_with_schema == path_examples.global_path_with_schema_parameter
+    )
+    
+    assert (
+        open_bldr.component.build.dict() == component_examples.param_component
+        )
+    
+    
 
 
 def test_paths_path__break(_allowed_types):
