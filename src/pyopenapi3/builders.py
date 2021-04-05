@@ -5,7 +5,7 @@ import re
 
 import yaml
 
-from pyopenapi3.data_types import Component
+from pyopenapi3.data_types import Component, Parameters, Schemas
 from pyopenapi3.utils import (
     build_mediatype_schema_from_content,
     create_schema,
@@ -500,14 +500,14 @@ class ComponentBuilder:
         # Flush functions that were used to build this ObjectSchema.
         self._field_builds = {}
 
-        return inject_component(cls)
+        return inject_component(cls, cmp_type=Schemas)
 
     def _parameters(self, cls=None, /, *, as_dict=None):
         if cls is not None:
             self._parameter_builds[cls.__name__] = \
                 ParamBuilder.build_param_from_cls(cls)
 
-            injected_comp_cls = inject_component(cls)
+            injected_comp_cls = inject_component(cls, cmp_type=Parameters)
             # Allow `cls` to be a valid reference in formatted `path`
             # on `PathItemBuilder`
             _allowed_types[cls.__name__] = injected_comp_cls
