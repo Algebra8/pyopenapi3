@@ -30,34 +30,34 @@ class Info:
     description = "Simple example API to store and retrieve pets"
 
 
-component = open_bldr.component
+cmp = open_bldr.component
 
 
-@component.schema
+@cmp.schema
 class Pet:
 
-    @component.schema_field(example="123", read_only=True)
+    @cmp.schema_field(example="123", read_only=True)
     def id(self) -> String:
         """Unique identifier"""
 
-    @component.schema_field(
+    @cmp.schema_field(
         required=True, example="Susie",
         min_length=1, max_length=100
     )
     def name(self) -> String:
         """Pet's name"""
 
-    @component.schema_field(required=True, example="cat", min_length=1)
+    @cmp.schema_field(required=True, example="cat", min_length=1)
     def animal_type(self) -> String:
         """Kind of animal"""
 
     # Object is an in-line description for a Free-Form Object.
     # For a more complicated object, use `Component.schema`.
-    @component.schema_field
+    @cmp.schema_field
     def tags(self) -> Object:
         """Custom tags"""
 
-    @component.schema_field(
+    @cmp.schema_field(
         read_only=True,
         example="2020-07-07T15:49:51.230+02:00"
     )
@@ -65,7 +65,7 @@ class Pet:
         """Creation time"""
 
 
-@component.parameter
+@cmp.parameter
 class PetId:
 
     name = "pet_id"
@@ -91,6 +91,8 @@ class Pets:
         )
     ]
 
+    # `paths.op` are attributes for the `OperationObject` —
+    # in this case it would be `get`.
     @paths.op(tags=["Pets"], operation_id="app.get_pets")
     @paths.query_param(
         name="animal_type",
@@ -107,7 +109,7 @@ class Pets:
         # as an arg in `@paths.op(...)`.
 
 
-@open_bldr.path
+@paths
 class PetsWithId:
 
     # `pet_id` will be a `path` param which is defined
