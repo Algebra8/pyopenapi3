@@ -5,7 +5,6 @@ install-linting:
 	# log installs
 	pip freeze
 
-
 .PHONY: lint
 lint: install-linting
 	# stop the build if there are Python syntax errors or undefined names
@@ -29,6 +28,11 @@ install-testing: install-pyopenapi3
 .PHONY: test
 test: install-testing
 	pytest -vv
+
+.PHONY: connexion-example
+connexion-example: install-pyopenapi3
+	pip install -r examples/connexion_example/conn-ex-requirements.txt
+	python examples/connexion_example/app.py
 
 .PHONY: clean
 clean:
