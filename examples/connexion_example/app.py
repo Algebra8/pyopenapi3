@@ -1,8 +1,24 @@
-from pyopenapi3 import OpenApiBuilder, create_schema
+"""Example usage of `connexion`.
 
+Connexion parts are taken from (https://github.com/hjacobs/connexion-
+example/blob/master/app.py).
+"""
+
+import os
+from typing import Optional, Dict, List, Any, Tuple, Union
+import datetime
+import logging
+from pathlib import Path
+
+import connexion
+from connexion import NoContent
+
+from pyopenapi3 import OpenApiBuilder, create_schema
 from pyopenapi3.data_types import String, Int32, Array, DateTime, Object
 from pyopenapi3.objects import Op, Response, RequestBody, JSONMediaType
 
+
+# pyopenapi3
 open_bldr = OpenApiBuilder()
 
 
@@ -75,7 +91,7 @@ class Pets:
         )
     ]
 
-    @paths.op(tags=["Pets"], operation_id=["app.get_pets"])
+    @paths.op(tags=["Pets"], operation_id="app.get_pets")
     @paths.query_param(
         name="animal_type",
         schema=create_schema(String, pattern="^[a-zA-Z0-9]*$")
@@ -108,7 +124,7 @@ class PetsWithId:
         Response(status=404, description="Pet does not exist")
     ]
 
-    @paths.op(tags=["Pets"], operation_id=["app.get_pet"])
+    @paths.op(tags=["Pets"], operation_id="app.get_pet")
     def get(self) -> Op[..., get_responses]:
         """Get a single pet"""
 
@@ -124,7 +140,7 @@ class PetsWithId:
         required=True
     )
 
-    @paths.op(tags=["Pets"], operation_id=["app.put_get"])
+    @paths.op(tags=["Pets"], operation_id="app.put_get")
     def put(self) -> Op[put_body, put_responses]:
         """Create or update a pet"""
 
@@ -133,6 +149,71 @@ class PetsWithId:
         Response(status=404, description="Pet does not exist")
     ]
 
-    @paths.op(tags=["Pets"], operation_id=["app.delete_pet"])
+    @paths.op(tags=["Pets"], operation_id="app.delete_pet")
     def delete(self) -> Op[..., delete_responses]:
         """Remove a pet"""
+
+
+# Connexion
+Pet = Dict[str, Any]
+Response = Tuple[str, int]
+
+PETS: Dict[str, Pet] = {}
+
+
+def get_pets(
+    limit: int,
+    animal_type: Optional[str] = None
+) -> Dict[str, List[Pet]]:
+    return {
+        'pets': [
+            pet for pet in PETS.values()
+            if animal_type is None or
+            pet['animal_type'] == animal_type[:limit]
+        ]
+    }
+
+
+def get_pet(pet_id: str) -> Union[Pet, Response]:
+    return PETS.get(pet_id, False) or ('Not found', 404)
+
+
+def put_get(pet_id: str, pet: Pet) -> Response:
+    exists = pet_id in PETS
+    pet['id'] = pet_id
+
+    if exists:
+        logging.info(f'Updating pet {pet_id}..')
+        PETS[pet_id].update(pet)
+    else:
+        logging.info(f'Creating pet {pet_id}..')
+        pet['created'] = datetime.datetime.utcnow()
+        PETS[pet_id] = pet
+    return NoContent, (200 if exists else 201)
+
+
+def delete_pet(pet_id: str) -> Response:
+    if pet_id in PETS:
+        logging.info(f'Deleting pet {pet_id}..')
+        del PETS[pet_id]
+        return NoContent, 204
+    else:
+        return NoContent, 404
+
+
+logging.basicConfig(level=logging.INFO)
+app = connexion.App(__name__)
+
+s = 'swagger.yaml'
+swagger_dir = os.path.abspath(os.path.dirname(__file__))
+swagger_path = Path(swagger_dir) / s
+with open(swagger_path, 'w') as f:
+    f.write(open_bldr.yaml())
+
+app.add_api(s)
+application = app.app
+
+
+if __name__ == '__main__':
+    print("Beginning server...")
+    app.run(port=8080, server='gevent')

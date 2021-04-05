@@ -301,6 +301,11 @@ class ParamBuilder:
         if 'schema' in kwargs:
             schema = kwargs.pop('schema')
             kwargs['schema'] = create_schema(schema)
+            # If the schema is a reference, then return
+            # the reference.
+            if type(schema) == type:
+                if issubclass(schema, Component):
+                    return kwargs['schema']
         elif 'content' in kwargs:
             content = kwargs.pop('content')
             kwargs['content'] = build_mediatype_schema_from_content(content)

@@ -119,7 +119,7 @@ def format_description(s: Optional[str]) -> Optional[str]:
 def parse_name_and_type_from_fmt_str(
         formatted_str: str,
         allowed_types: Optional[Dict[str, Component]] = None
-) -> Generator[Tuple[str, Union[Type[Field], str]], None, None]:
+) -> Generator[Tuple[str, Type[Field]], None, None]:
     """
     Parse a formatted string and return the names of the args
     and their types. Will raise a ValueError if the type is not
@@ -141,7 +141,7 @@ def parse_name_and_type_from_fmt_str(
         @open_bldr.component.parameter
         class PetId: ...
 
-        "/pets/{pet:PetId}" -> ("pet", "PetId")
+        "/pets/{pet:PetId}" -> ("pet", PetId)
 
     If the string is not formatted, then will return (None, None).
     """
