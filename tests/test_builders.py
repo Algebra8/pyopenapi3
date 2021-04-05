@@ -357,3 +357,25 @@ def test_component_with_inline_object():
             }
         }
     }
+
+
+def test_component_parameter_references():
+    """Test that a component parameter gets referenced correctly."""
+    c = ComponentBuilder()
+
+    @c.parameter
+    class PetId:
+
+        name = "pet_id"
+        description = "Pet's Unique Identifier"
+        in_field = "path"
+        schema = create_schema(String, pattern="^[a-zA-Z0-9-]+$")
+
+    @c.schema
+    class Pet:
+
+        @c.schema_field
+        def pet_id(self) -> PetId:
+            ...
+
+    assert c.build.dict() == component_examples.param_reference_comp
