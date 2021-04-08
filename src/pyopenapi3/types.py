@@ -16,17 +16,26 @@ def url_regex() -> Pattern[str]:
     global _url_regex_cache
     if _url_regex_cache is None:
         _url_regex_cache = re.compile(
-            r'(?:(?P<scheme>[a-z][a-z0-9+\-.]+)://)?'  # scheme https://tools.ietf.org/html/rfc3986#appendix-A
-            r'(?:(?P<user>[^\s:/]*)(?::(?P<password>[^\s/]*))?@)?'  # user info
+            # scheme https://tools.ietf.org/html/rfc3986#appendix-A
+            r'(?:(?P<scheme>[a-z][a-z0-9+\-.]+)://)?'
+            # user info
+            r'(?:(?P<user>[^\s:/]*)(?::(?P<password>[^\s/]*))?@)?'
             r'(?:'
-            r'(?P<ipv4>(?:\d{1,3}\.){3}\d{1,3})|'  # ipv4
-            r'(?P<ipv6>\[[A-F0-9]*:[A-F0-9:]+\])|'  # ipv6
-            r'(?P<domain>[^\s/:?#]+)'  # domain, validation occurs later
+            # ipv4
+            r'(?P<ipv4>(?:\d{1,3}\.){3}\d{1,3})|'
+            # ipv6
+            r'(?P<ipv6>\[[A-F0-9]*:[A-F0-9:]+\])|'
+            # domain, validation occurs later
+            r'(?P<domain>[^\s/:?#]+)'
             r')?'
-            r'(?::(?P<port>(\d+|({[a-zA-Z0-9_]*}))))?'  # port
-            r'(?P<path>/[^\s?#]*)?'  # path
-            r'(?:\?(?P<query>[^\s#]+))?'  # query
-            r'(?:#(?P<fragment>\S+))?',  # fragment
+            # port
+            r'(?::(?P<port>(\d+|({[a-zA-Z0-9_]*}))))?'
+            # path
+            r'(?P<path>/[^\s?#]*)?'
+            # query
+            r'(?:\?(?P<query>[^\s#]+))?'
+            # fragment
+            r'(?:#(?P<fragment>\S+))?',
             re.IGNORECASE,
         )
     return _url_regex_cache
