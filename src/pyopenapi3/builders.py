@@ -170,7 +170,8 @@ class OperationBuilder:
         method_name = method.__name__  # e.g. get
 
         if method_name in self.builds:
-            raise ValueError("Can't have more than one GET per path.")
+            raise ValueError(
+                f"Can't have more than one {method_name} per path.")
 
         op = get_type_hints(method, localns=context)['return']
 
