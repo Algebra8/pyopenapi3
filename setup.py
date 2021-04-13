@@ -19,7 +19,7 @@ setup(
     name='pyopenapi3',
     version=version,
     license="MIT",
-    description='Generating OpenAPI3 from Python objects',
+    description='Generate OpenAPI3 from Python objects',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/Algebra8/pyopenapi3',
