@@ -202,10 +202,10 @@ class PetsWithId:
 
 
 if __name__ == '__main__':
-    with open('a.json', 'w') as f:
+    with open('example.json', 'w') as f:
         f.write(open_.json(indent=2))
 
-    with open('f.yaml', 'w') as q:
+    with open('example.yaml', 'w') as q:
         q.write(open_.yaml())
 
 ```
