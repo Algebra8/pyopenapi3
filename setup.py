@@ -3,7 +3,7 @@ import pathlib
 
 here = pathlib.Path(__file__).parent.resolve()
 
-long_description = (here / 'README.rst').read_text(encoding='utf-8')
+long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 
 def get_version(root_path):
@@ -21,7 +21,7 @@ setup(
     license="MIT",
     description='Generating OpenAPI3 from Python objects',
     long_description=long_description,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     url='https://github.com/Algebra8/pyopenapi3',
     author='Milad M. Nasr',
     author_email='milad.m.nasr@gmail.com',
